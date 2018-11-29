@@ -18,11 +18,11 @@ import itertools
 #import py_tree_lmdb
 #import py_store_lmdb
 import binascii 
-import solr_filter_db
+#import solr_filter_db
 #import db_util
-import DB
-import Blobldb 
-import py_tree
+#import DB
+#import Blobldb 
+
 ID,FORM,LEMMA,UPOS,XPOS,FEATS,HEAD,DEPREL,DEPS,MISC=range(10)
 
 symbs=re.compile(r"[^A-Za-z0-9_]",re.U)
@@ -110,7 +110,7 @@ if __name__=="__main__":
     parser.add_argument('--source', default="unknown", help='Source (like UDv2, fi_pbank). default: %(default)s')
 
     parser.add_argument('--blobdb', default="Blobldb", help='Blob database module. default: %(default)s')
-    parser.add_argument('--filterdb', default="lmdb_filter_db", help='Filter database module. default: %(default)s')
+    parser.add_argument('--filterdb', default="lev_filter_db", help='Filter database module. default: %(default)s')
 
 
     args = parser.parse_args(sys.argv[1:])
@@ -125,20 +125,26 @@ if __name__=="__main__":
 
 
     #Load the database modules
+    sys.path.append('./dep_search/')
+    import py_tree
+    #pkg_loader = importlib.find_loader('dep_search')
+    #pkg = pkg_loader.load_module()
+
     blob_db = importlib.import_module(args.blobdb)
     filter_db = importlib.import_module(args.filterdb)
+
+    #blob_db = importlib.import_module(args.blobdb, package='dep_search')
+    #filter_db = importlib.import_module(args.filterdb, package='dep_search')
 
     db = blob_db.DB(args.dir)
     db.open()
     solr_idx=filter_db.IDX(args)
         
-    src_data=read_conll(sys.stdin, args.max, args.skip_first)
+    src_data=read_conll(open('./test_data/grc_perseus-ud-dev.conllu'), args.max, args.skip_first)
     set_dict={}
     lengths=0
     counter=0
-    #db = py_store_lmdb.Py_LMDB()
-    #db.open(args.dir)
-    #db.start_transaction()
+
 
     tree_id=0
     from collections import Counter
@@ -149,6 +155,7 @@ if __name__=="__main__":
     print ()
     print ()
     for counter,(sent,comments) in enumerate(src_data):
+        import pdb;pdb.set_trace()
         if len(sent)>sent_limit:
             continue #Skip too long sentences
         if max(len(cols[FORM]) for cols in sent)>50 or max(len(cols[LEMMA]) for cols in sent)>50:
@@ -190,10 +197,6 @@ if __name__=="__main__":
     db.close()
     db.finish_indexing()
 
-    #write the json config
     write_db_json(args)
-    #    1. blobdb : module
-    #    2. filterdb : module
-    #    3. args : 
 
 

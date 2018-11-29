@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 from dep_search import *
+import sys
+sys.path.append('./dep_search/')
 import time
 import sys
 import os
@@ -243,10 +245,10 @@ def load(pyxFile):
     """Loads a search pyx file, returns the module"""
     ###I need to hack around this, because this thing is messing stdout
     #cythonize -a -i xxx.pyx
-    error=subprocess.call(["cythonize","-a","-i",pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
+    error=subprocess.call(["cythonize","-a","-i",'./dep_search/' + pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
     if error!=0:
         sys.exit(1)
-    mod=importlib.import_module(pyxFile)
+    mod=importlib.import_module('dep_search.' + pyxFile)
     return mod
 
 def get_url(comments):
@@ -457,6 +459,7 @@ def old_query_from_db(q_obj,args):
 
         except: pass#import traceback; traceback.print_exc()
 
+
     solr_q.kill()         
     print >> sys.stderr, "Found %d trees in %.3fs time"%(counter,time.time()-start)
     return counter
@@ -553,7 +556,7 @@ def main(argv):
 
         temp_file_name = 'qry_' + m.hexdigest() + '.pyx'
         if not os.path.isfile(query_folder + temp_file_name):
-            f = open('qry_' + m.hexdigest() + '.pyx', 'wt')
+            f = open('./dep_search/qry_' + m.hexdigest() + '.pyx', 'wt')
             try:
                 pseudocode_ob.generate_and_write_search_code_from_expression(args.search, f, json_filename=json_filename, db=db, case=args.case)
             except Exception as e:
@@ -595,8 +598,12 @@ def main(argv):
         extra_params= ast.literal_eval(args.extra_solr_params)
     except:
         extra_params = {}
-
-    langs = [args.langs,]
+    
+    langs=[]
+    if langs == "": 
+        langs=[]
+    else:
+        langs = [args.langs,]
     if ',' in args.langs:
         langs = args.langs.split(',')
 

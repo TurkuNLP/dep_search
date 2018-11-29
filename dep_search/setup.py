@@ -10,3 +10,17 @@ setup(name='DB',
 setup(name='Blobldb',
       ext_modules=cythonize("Blobldb.pyx"))
 
+try:
+
+    setup(name='kc_Blobldb',
+          ext_modules=cythonize("kc_Blobldb.pyx"))
+except:
+       
+    pass
+
+try:
+
+    setup(name='lmdb_Blobldb',
+          ext_modules=cythonize("lmdb_Blobldb.pyx"))
+except:
+    pass

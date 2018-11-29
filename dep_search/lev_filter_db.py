@@ -14,6 +14,7 @@ import plyvel
 
 ID,FORM,LEMMA,UPOS,XPOS,FEATS,HEAD,DEPREL,DEPS,MISC=range(10)
 field_re=re.compile(r"^(gov|dep|token|lemma|tag)_(a|s)_(.*)$",re.U)
+sys.path.append('./dep_search/')
 class Query():
 
     def __init__(self,extra_terms, compulsory_items,or_groups, solr, case, q_obj, extra_params={}, langs=[]):
@@ -67,9 +68,15 @@ class Query():
         self.finished[lang]=False
         #self.lang_qs[lang] = Queue()
 
-        for idx in self.ids_gen(extra_tags=['lang_' + lang]):
-            #Feed it to the queue
-            self.tree_id_queue.put(idx)
+        if lang != '':
+            for idx in self.ids_gen(extra_tags=['lang_' + lang]):
+                #Feed it to the queue
+                self.tree_id_queue.put(idx)
+        else:
+            for idx in self.ids_gen():
+                #Feed it to the queue
+                self.tree_id_queue.put(idx)
+
         self.finished[lang]=True
         self.tree_id_queue.put(-1)
 
@@ -95,7 +102,64 @@ class Query():
                 return False
         return True
 
+
     def ids_gen(self, extra_tags=[]):
+
+        #This guy yields ints, which are the blob ids we want
+
+        #Check the list of required ints
+        #If none, just give all ids :DD
+
+
+        #Later we need to deal with ors as well
+        comps = self.compulsory_items[:]# + extra_tags
+
+        #if len(extra_tags) > 0:
+        #print ('!!!!', comps)
+        comps.extend(extra_tags)
+
+        #So, compulsory items
+        counts = []
+        hits = 0
+
+        if len(comps) < 1:
+            comps.append('dep_a_anyrel')
+
+        for rec in comps:
+            print (rec)
+            counts.append((int(self.get_count(rec)), rec))
+        #import pdb;pdb.set_trace()
+        counts.sort()
+        #print (counts)
+        #print ('cvcv',counts[0][1].encode('utf8'))
+        rarest_queue = self.db.iterator(prefix=counts[0][1].encode('utf8'))
+        rarest_queue.seek_to_start()
+        for idx in rarest_queue:
+            #print (idx)
+            matches = 0
+            for c in counts:
+                
+                found = self.db.get(c[1].encode('utf8') + '_'.encode('utf8') + idx[0].split(b'_')[-1]) != None
+                #print (found)
+                #    found = True
+                #except:
+                #    found = False
+                #print (found)
+                if not found:
+                    break
+                else:
+                    matches += 1
+
+            if matches == len(counts):
+                #print ('!!!!', int(idx[0].split('_'.encode('utf8'))[-1]))
+                yield int(idx[0].split('_'.encode('utf8'))[-1])
+                hits += 1
+
+
+
+
+
+    def ids_gen_xx(self, extra_tags=[]):
 
         #This guy yields ints, which are the blob ids we want
 
@@ -129,6 +193,7 @@ class Query():
             for c in counts[1:]:
 
                 found = self.db.get(c[1].encode('utf8') + '_'.encode('utf8') + idx) != None
+                print (found)
                 #    found = True
                 #except:
                 #    found = False
@@ -159,7 +224,7 @@ class Query():
 
 
 
-
+import py_tree
 class IDX(object):
 
     def __init__(self,args):

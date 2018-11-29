@@ -1,3 +1,5 @@
+import sys
+sys.path.append('./dep_search/')
 from libcpp cimport bool
 #from db_util cimport DB
 from setlib.pytset cimport PyTSet, PyTSetArray
@@ -397,8 +399,12 @@ cdef class Search:  # base class for all searches
         #db.set_tree_to_id(tree_id)
         #db.fill_sets(self.sets, self.set_ids, <unsigned char *>self.types, self.optional, self.set_size)
         blob = db.get_blob(tree_id)
+
         #print ('!!!', self.blob)
-        self.fill_from_blob(<char*>blob)
+        has_sets = self.fill_from_blob(<char*>blob)
+
+        if has_sets==1:
+            return set()
         self.initialize()
         result=self.exec_search()
         #print (result)
