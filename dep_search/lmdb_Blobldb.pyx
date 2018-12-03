@@ -23,12 +23,12 @@ class DB(BaseDB):
         except:
             pass
 
-        self.env = lmdb.open(self.name + '/lmdb/', max_dbs=2)
-        self.blob_db = self.env.open_db(b'blob')
-        self.set_db = self.env.open_db(b'sets')
+        self.env = lmdb.open(self.name + '/lmdb/', max_dbs=2, map_size=10485760*1000)
+        #self.blob_db = self.env.open_db(b'blob')
+        #self.set_db = self.env.open_db(b'sets')
 
         self.txn = self.env.begin(write=True)
-
+        self.rtxn = self.env.begin()
 
     #
     def close(self):
@@ -39,22 +39,35 @@ class DB(BaseDB):
         # get set ids
         val = self.s.set_id_list_from_conllu(sent, comments, self)
         idx = self.get_count('sets_'.encode('utf8'))
-        self.txn.put('sets_'.encode('utf8') + idx, str(val).encode('utf8'), db=b'sets')
-        self.txn.commit()
+        self.txn.put('sets_'.encode('utf8') + idx, str(val).encode('utf8'))
+        #self.txn.commit()
         return idx
 
     #
     def has_id(self, idx):
-        return self.txn.get(('tag_' + idx).encode('utf8'), default=None, db=b'sets') != None
+        #print (idx)
+        idx = idx.encode('utf8')
+        #print (self.rtxn.get(b'tag_' + idx) != None)
+        try:
+            idx = int(self.rtxn.get(b'tag_' + idx))
+            return True
+        except:
+            return False
     #
+
     def get_id_for(self, idx):
-        return int(self.txn.get(('tag_' + idx).encode('utf8')), default=None, db=b'sets')
+
+
+
+
+        return int(self.txn.get(('tag_' + idx).encode('utf8')))
 
     #
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
-            self.txn.put(('tag_' + item).encode('utf8'), self.get_count('tag_'), db=b'sets')
+            self.txn.put(('tag_' + item).encode('utf8'), self.get_count('tag_'))
             self.txn.commit()
+            self.txn = self.env.begin(write=True)
     #
     def store_blob(self, blob, blob_idx):
         #print (('blob_' + str(blob_idx)).encode('utf8'))
@@ -65,14 +78,16 @@ class DB(BaseDB):
 
             
 
-        self.txn.put(('blob_'.encode('utf8') + blob_idx), blob, db=b'blob')
+        self.txn.put(('blob_'.encode('utf8') + blob_idx), blob)
         self.txn.commit()
+        self.txn = self.env.begin(write=True)
+
         return blob_idx
 
     #
     def get_blob(self, idx):
         #print (self.txn.get(('blob_' + str(idx)).encode('utf8')))
-        self.blob = self.txn.get(('blob_' + str(idx)).encode('utf8'), default=None, db=b'blob')
+        self.blob = self.rtxn.get(('blob_' + str(idx)).encode('utf8'), default=None)
         return self.blob
 
     #
@@ -84,7 +99,7 @@ class DB(BaseDB):
 
         if isinstance(pref, str):
             pref = pref.encode('utf8')
-        cursor = self.txn.cursor()
+        cursor = self.rtxn.cursor()
         if not cursor.set_key(pref):
             return b'0'
 
