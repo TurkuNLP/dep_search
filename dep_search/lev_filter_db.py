@@ -211,7 +211,6 @@ class Query():
     def get_lang(self, idx):
         return self.db.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'))
 
-
     def get_count(self, pref):
         counter = 0
 
@@ -221,6 +220,22 @@ class Query():
         for key, value in self.db.iterator(prefix=pref):
             counter += 1
         return str(counter).encode('utf8')
+
+
+    '''
+    def get_count(self, pref):
+        counter = 0
+
+        if isinstance(pref, str):
+            pref = pref.encode('utf8')
+        cursor = self.rtxn.cursor()
+        if not cursor.set_key(pref):
+            return b'0'
+
+        for key, value in enumerate(cursor.iternext_dup()):
+            counter += 1
+        return str(counter).encode('utf8')
+    '''
 
 
 

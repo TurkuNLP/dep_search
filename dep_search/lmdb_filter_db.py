@@ -35,8 +35,8 @@ class Query():
         self.processes = {}
 
         #Init lmdb
-        self.env = lmdb.open(self.name + '/lmdb_filter/', max_dbs=2)
-        self.db = env.open_db()
+        self.env = lmdb.open(self.dir + '/lmdb_filter/', max_dbs=2)
+        self.db = self.env.open_db()
         self.txn = self.env.begin(write=True)
 
 	#Start the main loop thread
@@ -125,9 +125,11 @@ class Query():
         counts.sort()
         #print (counts)
 
-        rarest_queue = self.txn.iterator(prefix=counts[0][1].encode('utf8'))
+        rarest_pref=counts[0][1].encode('utf8')
+        cursor = self.txn.cursor()
+        cursor.set_range(rarest_pref)
 
-        for idx in rarest_queue:
+        for idx, vv in cursor:
             matches = 0
             for c in counts[1:]:
 
@@ -157,11 +159,13 @@ class Query():
 
         if isinstance(pref, str):
             pref = pref.encode('utf8')
+        cursor = self.txn.cursor()
+        if not cursor.set_key(pref):
+            return b'0'
 
-        for key, value in self.txn.iterator(prefix=pref):
+        for key, value in enumerate(cursor.iternext_dup()):
             counter += 1
         return str(counter).encode('utf8')
-
 
 
 
@@ -185,7 +189,7 @@ class IDX(object):
             pass
 
         self.env = lmdb.open(self.name + '/lmdb_filter/', max_dbs=2)
-        self.db = env.open_db()
+        self.db = self.env.open_db()
         self.txn = self.env.begin(write=True)
 
 
