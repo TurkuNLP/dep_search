@@ -35,7 +35,7 @@ class Query():
         self.processes = {}
 
         #Init lmdb
-        self.env = lmdb.open(self.dir + '/lmdb_filter/', max_dbs=2)
+        self.env = lmdb.open(self.dir + '/lmdb_filter/', max_dbs=2, map_size=10485760*1000)
         self.db = self.env.open_db()
         self.txn = self.env.begin(write=True)
 
@@ -70,9 +70,15 @@ class Query():
         self.finished[lang]=False
         #self.lang_qs[lang] = Queue()
 
-        for idx in self.ids_gen(extra_tags=['lang_' + lang]):
-            #Feed it to the queue
-            self.tree_id_queue.put(idx)
+        if lang != '':
+            for idx in self.ids_gen(extra_tags=['lang_' + lang]):
+                #Feed it to the queue
+                self.tree_id_queue.put(idx)
+        else:
+            for idx in self.ids_gen():
+                #Feed it to the queue
+                self.tree_id_queue.put(idx)
+
         self.finished[lang]=True
         self.tree_id_queue.put(-1)
 
@@ -123,20 +129,24 @@ class Query():
             counts.append((int(self.get_count(rec)), rec))
         #import pdb;pdb.set_trace()
         counts.sort()
-        #print (counts)
+        print (counts)
 
         rarest_pref=counts[0][1].encode('utf8')
         cursor = self.txn.cursor()
-        cursor.set_range(rarest_pref)
-
-        for idx, vv in cursor:
+        #print (cursor.set_key(rarest_pref))
+        print (cursor.set_range(rarest_pref))
+        print (rarest_pref)
+        cx = 0
+        for key, val in cursor:
+            if not key.startswith(rarest_pref): continue
+            #print (key, val)
             matches = 0
-            for c in counts[1:]:
+            for c in counts:
 
                 found = False
                 try:
-                    self.txn.get(c[1].encode('utf8') + '_'.encode('utf8') + idx, default=None)
-                    found = True
+                    if self.txn.get(c[1].encode('utf8') + '_'.encode('utf8') + key.split(b'_')[-1], default=None) != None:
+                        found = True
                 except:
                     found = False
         
@@ -145,10 +155,12 @@ class Query():
                 else:
                     matches += 1
 
-            if matches == len(counts[1:]):
+            if matches == len(counts):
                 #print ('!!!!', int(idx[0].split('_'.encode('utf8'))[-1]))
-                yield int(idx[0].split('_'.encode('utf8'))[-1])
+                yield int(key.split(b'_')[-1])#int(idx[0].split('_'.encode('utf8'))[-1])
+                #print ('!!', int(key.split(b'_')[-1]))
                 hits += 1
+            #cx += 1
 
     def get_lang(self, idx):
         return self.txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), default=None)
@@ -160,12 +172,14 @@ class Query():
         if isinstance(pref, str):
             pref = pref.encode('utf8')
         cursor = self.txn.cursor()
-        if not cursor.set_key(pref):
+        if not cursor.set_range(pref):
             return b'0'
 
-        for key, value in enumerate(cursor.iternext_dup()):
-            counter += 1
+        for key, value in cursor:
+            if key.startswith(pref):
+                counter += 1
         return str(counter).encode('utf8')
+
 
 
 
@@ -188,7 +202,7 @@ class IDX(object):
         except:
             pass
 
-        self.env = lmdb.open(self.name + '/lmdb_filter/', max_dbs=2)
+        self.env = lmdb.open(self.name + '/lmdb_filter/', max_dbs=2, map_size=10485760*1000)
         self.db = self.env.open_db()
         self.txn = self.env.begin(write=True)
 
@@ -236,10 +250,17 @@ class IDX(object):
         idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
         for v in val:
             self.txn.put((v + '_' + str(idx)).encode('utf8'), b'1')
-        
+            self.txn.commit()
+            self.txn = self.env.begin(write=True)
         #self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
+        #self.txn.put('tag_'.encode('utf8'), b'1')
         self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8'))
+        self.txn.commit()
+        self.txn = self.env.begin(write=True)
         self.txn.put('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1')
+        self.txn.commit()
+        #self.txn = self.env.begin(write=True)
+        self.txn = self.env.begin(write=True)
         return idx
 
     def get_count(self, pref):
@@ -248,9 +269,10 @@ class IDX(object):
         if isinstance(pref, str):
             pref = pref.encode('utf8')
         cursor = self.txn.cursor()
-        if not cursor.set_key(pref):
+        if not cursor.set_range(pref):
             return b'0'
 
-        for key, value in enumerate(cursor.iternext_dup()):
-            counter += 1
+        for key, value in cursor:
+            if key.startswith(pref):
+                counter += 1
         return str(counter).encode('utf8')

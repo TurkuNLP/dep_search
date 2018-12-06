@@ -34,8 +34,8 @@ class Query():
         self.processes = {}
 
         #Init db
-        self.db = DB(self.name + '/leveldb/', create_if_missing=True) 
-        self.db.open(self.name + '/blobs.kc', DB.OWRITER | DB.OCREATE)
+        self.db = DB(self.dir + '/leveldb/', create_if_missing=True) 
+        self.db.open(self.dir + '/blobs.kc', DB.OWRITER | DB.OCREATE)
 
 	#Start the main loop thread
         if len(langs) < 1:

@@ -140,7 +140,7 @@ if __name__=="__main__":
     db.open()
     solr_idx=filter_db.IDX(args)
         
-    src_data=read_conll(open('./test_data/grc_perseus-ud-dev.conllu'), args.max, args.skip_first)
+    src_data=read_conll(sys.stdin, args.max, args.skip_first)
     set_dict={}
     lengths=0
     counter=0
@@ -155,7 +155,7 @@ if __name__=="__main__":
     print ()
     print ()
     for counter,(sent,comments) in enumerate(src_data):
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         if len(sent)>sent_limit:
             continue #Skip too long sentences
         if max(len(cols[FORM]) for cols in sent)>50 or max(len(cols[LEMMA]) for cols in sent)>50:

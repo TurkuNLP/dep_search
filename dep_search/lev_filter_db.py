@@ -126,7 +126,7 @@ class Query():
             comps.append('dep_a_anyrel')
 
         for rec in comps:
-            print (rec)
+            #Sprint (rec)
             counts.append((int(self.get_count(rec)), rec))
         #import pdb;pdb.set_trace()
         counts.sort()

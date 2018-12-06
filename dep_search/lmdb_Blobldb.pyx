@@ -46,25 +46,22 @@ class DB(BaseDB):
     #
     def has_id(self, idx):
         #print (idx)
+
         idx = idx.encode('utf8')
-        #print (self.rtxn.get(b'tag_' + idx) != None)
-        try:
-            idx = int(self.rtxn.get(b'tag_' + idx))
-            return True
-        except:
-            return False
+        #print (self.txn.get(b'tag_' + idx) != None)
+        return self.txn.get(b'tag_' + idx) != None
     #
 
     def get_id_for(self, idx):
 
 
-
-
+        #print (idx, int(self.txn.get(('tag_' + idx).encode('utf8'))))
         return int(self.txn.get(('tag_' + idx).encode('utf8')))
 
     #
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
+            #print ('store', item)
             self.txn.put(('tag_' + item).encode('utf8'), self.get_count('tag_'))
             self.txn.commit()
             self.txn = self.env.begin(write=True)
@@ -88,6 +85,7 @@ class DB(BaseDB):
     def get_blob(self, idx):
         #print (self.txn.get(('blob_' + str(idx)).encode('utf8')))
         self.blob = self.rtxn.get(('blob_' + str(idx)).encode('utf8'), default=None)
+        #print (self.blob)
         return self.blob
 
     #
@@ -99,10 +97,11 @@ class DB(BaseDB):
 
         if isinstance(pref, str):
             pref = pref.encode('utf8')
-        cursor = self.rtxn.cursor()
-        if not cursor.set_key(pref):
+        cursor = self.txn.cursor()
+        if not cursor.set_range(pref):
             return b'0'
 
-        for key, value in enumerate(cursor.iternext_dup()):
-            counter += 1
+        for key, value in cursor:
+            if key.startswith(pref):
+                counter += 1
         return str(counter).encode('utf8')
