@@ -286,6 +286,7 @@ def query_from_db(q_obj, args, db, fdb):
                 #print (fdb.processes)
                 if end_cnt == len(args.langs.split(',')):
                     break
+                continue
 
             res_set = q_obj.check_tree_id(idx, db)
             #idx += 1
@@ -474,7 +475,7 @@ def main(argv):
     parser.add_argument('-m', '--max', type=int, default=500, help='Max number of results to return. 0 for all. Default: %(default)d.')
     parser.add_argument('-d', '--database', default="/mnt/ssd/sdata/pb-10M/*.db",help='Name of the database to query or a wildcard of several DBs. Default: %(default)s.')
     parser.add_argument('-o', '--output', default=None, help='Name of file to write to. Default: STDOUT.')
-    parser.add_argument('-s', '--solr', default="http://localhost:8983/solr/dep_search", help='Solr url. Default: %(default)s')
+    parser.add_argument('-s', '--solr', default="http://localhost:8983/solr/dep_search2", help='Solr url. Default: %(default)s')
     parser.add_argument('search', nargs="?", default="parsubj",help='The name of the search to run (without .pyx), or a query expression. Default: %(default)s.')
     parser.add_argument('--context', required=False, action="store", default=0, type=int, metavar='N', help='Print the context (+/- N sentences) as comment. Default: %(default)d.')
     parser.add_argument('--keep_query', required=False, action='store_true',default=False, help='Do not delete the compiled query after completing the search.')
@@ -610,7 +611,7 @@ def main(argv):
     if not db_args['filterdb'] == 'solr_filter_db':
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, db_args['dir'], args.case, query_obj, extra_params=extra_params, langs=langs)
     else:
-        fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
+        fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, db_args['solr'], args.case, query_obj, extra_params=extra_params, langs=langs)
 
     total_hits+=query_from_db(query_obj, args, db, fdb)
     print ("Total number of hits:",total_hits,file=sys.stderr)

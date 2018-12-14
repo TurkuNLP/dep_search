@@ -129,7 +129,7 @@ class Query():
         return qry
 
     def kill_threads(self):
-        pass
+        self.kill()
 
     def ids_from_solr_gen(self):
 
@@ -137,10 +137,13 @@ class Query():
 
             qry= self.get_solr_query()
 
+            if len(self.langs)>0:
+                qry = '(' + qry + ') AND (' + ' OR '.join(['lang:' + l for l in self.langs]) + ')'
+
             #print >> sys.stderr, "Solr qry", qry.encode('utf8')
             #### XXX TODO How many rows?
             beg=time.time()
-            params = {u"q":qry,u"wt":u"csv",u"rows":500000,u"fl":u"id",u"sort":u"id asc"}
+            params = {u"q":qry,u"wt":u"csv",u"rows":2147483647,u"fl":u"id",u"sort":u"id asc"}
             if type(self.extra_params) == dict:
                 params.update(self.extra_params)
             r=requests.get(self.solr+"/select",params=params, stream=True)
@@ -187,22 +190,24 @@ class IDX(object):
             self.current_id=0
         else:
             self.current_id=int(max_id)
-        #print ("Solr setting id to",self.current_id)
+        #print ("Solr setting id to",self.current_id, file=sys.stderr)
         
     def commit(self,force=False):
         if force or len(self.documents)>=self.batch_size:
             try:
                 s=pysolr.Solr(self.solr_url,timeout=600)
                 self.tree_count+=len(self.documents) #sum(len(d[u"_childDocuments_"]) for d in self.documents)
-                #print >> sys.stderr, self.tree_count, "trees in Solr"
-                s.add(self.documents)
+                print (self.tree_count, "trees in Solr")#, file=sys.stderr)
+                #print (self.documents)
+                #print (s.add(self.documents))
                 self.documents=[]
+                s.commit()
             except KeyboardInterrupt:
                 raise
             except:
                 traceback.print_exc()
                 if len(self.documents)>10*self.batch_size:
-                    #print >> sys.stderr, "Too many documents uncommitted", len(self.documents)
+                    print ("Too many documents uncommitted", len(self.documents))#, file=sys.stderr)
                     sys.exit(-1)
 
     def next_id(self):
@@ -251,5 +256,6 @@ class IDX(object):
         d[u"source"]=self.source
 
         self.documents.append(d)
-        self.commit()
+        self.commit(force=True)
+        
         return d[u"id"]

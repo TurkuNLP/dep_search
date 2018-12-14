@@ -95,8 +95,6 @@ def write_db_json(args):
 
 
 
-
-
 if __name__=="__main__":
     import argparse
 
@@ -114,6 +112,8 @@ if __name__=="__main__":
 
 
     args = parser.parse_args(sys.argv[1:])
+    write_db_json(args)
+
 #    gather_tbl_names(codecs.getreader("utf-8")(sys.stdin))
     os.system("mkdir -p "+args.dir)
     if args.wipe:
@@ -196,7 +196,7 @@ if __name__=="__main__":
     print ("Average tree length:", lengths/float(counter))
     db.close()
     db.finish_indexing()
-
-    write_db_json(args)
+    #http://localhost:8983/solr/dep_search2/update?commit=true
+ 
 
 
