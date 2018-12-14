@@ -274,7 +274,7 @@ def query_from_db(q_obj, args, db, fdb):
 
 
     q = fdb.tree_id_queue 
-
+    #import pdb;pdb.set_trace()
     while True:
         try:
             #print ('???')
@@ -286,6 +286,7 @@ def query_from_db(q_obj, args, db, fdb):
                 #print (fdb.finished)
                 #print (fdb.started)
                 #print (fdb.processes)
+                #print ('!!!', end_cnt, len(args.langs.split(',')))
                 if end_cnt == len(args.langs.split(',')):
                     break
                 continue
@@ -624,7 +625,7 @@ def main_db_query(args):
     if ',' in args.langs:
         langs = args.langs.split(',')
 
-    if not db_args['filterdb'] == 'solr_filter_db':
+    if not db_args['filterdb'].startswith('solr_filter_db'):
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, db_args['dir'], args.case, query_obj, extra_params=extra_params, langs=langs)
     else:
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
