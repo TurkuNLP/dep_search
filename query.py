@@ -29,6 +29,8 @@ import glob
 import tempfile
 import sys
 from collections import defaultdict
+import glob
+import copy
 
 field_re=re.compile(r"^(!?)(gov|dep|token|lemma|tag)_(a|s)_(.*)$",re.U)
 query_folder = './queries/'
@@ -487,6 +489,20 @@ def main(argv):
 
     args = parser.parse_args(argv[1:])
 
+    if '*' in args.d:
+        for db in glob.glob(args.d):
+            xargs = copy.copy(args)
+            xargs.database = db
+            main_db_query(xargs)
+    elif ',' in args.d:
+        for db in args.d.split(','):
+            xargs = copy.copy(args)
+            xargs.database = db
+            main_db_query(xargs)
+    else:
+        main_db_query(args)
+
+def main_db_query(args):
 
     #The blob and id database
     inf = open(args.database+'/db_config.json', 'rt')
