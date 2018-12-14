@@ -35,6 +35,15 @@ class Query():
     def get_queue(self):
         return self.tree_id_queue
 
+    #XXX
+    def get_lang(self, idx):
+        params = {u"q":"id:"+str(idx),u"wt":u"json",u"rows":1,u"fl":u"lang",u"sort":u"id asc"}
+        r = requests.get(self.solr+"/select",params=params)
+        jr = json.loads(r.text)['response']['docs'][0]['lang']
+        #{'responseHeader': {'status': 0, 'QTime': 0, 'params': {'q': 'id:1069', 'fl': 'lang', 'sort': 'id asc', 'rows': '1', 'wt': 'json'}}, 'response': {'numFound': 1, 'start': 0, 'docs': [{'lang': 'pl'}]}}
+
+        return jr
+        #return json.loads(requests.get(self.solr+"/select",params=params, stream=True))['response']['lang']
 
     def main_loop(self):
         self.started=True
