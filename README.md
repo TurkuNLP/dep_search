@@ -3,8 +3,6 @@
 ### General Notes
 
 !!! WORK IN PROGRESS !!!
-! Everything is experimental and crash-prone !
-
 A python3 toolkit for dependency tree search.
 
 ### Install
@@ -35,7 +33,7 @@ $ cat ./test_data/ud/ud-treebanks-v2.3/UD_Arabic-NYUAD/ar_nyuad-ud-train.conllu 
 ~~~~
 
 
-#### Available db modules [Some a-little-experimental]:
+#### Available db modules:
 * Solr
     - solr_blob_db, solr_filter_db
 * Level-DB
@@ -58,9 +56,10 @@ To query a database with specific languages:
 python3 query.py -d all_ud_db --langs hi '_ <amod _'
 python3 query.py -d all_ud_db --langs pl,hi '_ <amod _'
 ~~~~
-To query multiple databases, one can use asterisks:
+To query multiple databases, one can use asterisks, or list the databases:
 ~~~~
 python3 query.py -d all_*_db  --langs pl,hi '_ <amod _'
+python3 query.py -d x_db,a_db  --langs pl,hi '_ <amod _'
 ~~~~
 #### Query as conllu filter
 To use dep_search as a conllu filter:
