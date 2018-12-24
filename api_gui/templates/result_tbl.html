@@ -1,0 +1,20 @@
+{% for tree,comment in trees %}
+<a data-target="#tree_{{loop.index}}" data-toggle="collapse"> [context]</a>
+<a data-target="#conllu_{{loop.index}}" data-toggle="collapse"> [conllu]</a>
+<div class="collapse" id="tree_{{loop.index}}">
+  {% for c_line in comment %}
+  {{c_line}}<br/>
+  {% endfor %}
+</div>
+<div class="collapse" id="conllu_{{loop.index}}">
+<pre>
+{{tree}}
+</pre>
+</div>
+<pre>
+<code class="conllu">
+{{tree}}
+</code>
+</pre>
+{% endfor %}
+

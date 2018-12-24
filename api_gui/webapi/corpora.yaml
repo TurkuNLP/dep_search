@@ -1,0 +1,27 @@
+PBV4:
+  name: Finnish Internet Parsebank
+
+S24:
+  name: Suomi24
+
+SV:
+  name: "Swedish Parsebank (90M)"
+
+"UD_(.*)-v13":
+  name: "\\1 (UDv1.3)"
+
+"UD_(.*)-v2.0":
+  name: "\\1 (UDv2.0)"
+
+
+"UD_(.*)-dev":
+  name: "\\1 (development)"
+
+CICERO:
+  name: "Cicero texts DigiHum"
+
+NCICERO:
+  name: "Non-Cicero texts DigiHum"
+
+PubMed250K:
+  name: "PubMed 250K"

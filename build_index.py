@@ -88,6 +88,10 @@ def get_doc_url(comments):
 
 def write_db_json(args):
 
+    outf = open(args.dir+'/langs', 'at')
+    outf.write(args.lang + '\n')
+    outf.close()
+
     outf = open(args.dir+'/db_config.json', 'wt')
     json.dump(vars(args), outf, indent = 4)
     outf.close()

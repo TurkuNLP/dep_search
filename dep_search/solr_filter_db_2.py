@@ -46,7 +46,7 @@ class Query():
     #XXX
     def get_lang(self, idx):
         params = {u"q":"id:"+str(idx),u"wt":u"json",u"rows":1,u"fl":u"lang",u"sort":u"id asc"}
-        r = requests.get(self.solr+"/select",params=params)
+        r = requests.get(self.solr+"/select",params=params,stream=True)
         jr = json.loads(r.text)['response']['docs'][0]['lang']
         #{'responseHeader': {'status': 0, 'QTime': 0, 'params': {'q': 'id:1069', 'fl': 'lang', 'sort': 'id asc', 'rows': '1', 'wt': 'json'}}, 'response': {'numFound': 1, 'start': 0, 'docs': [{'lang': 'pl'}]}}
 
