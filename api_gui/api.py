@@ -130,7 +130,7 @@ def get_xtrees(ticket, lang, start, end):
                     tc += 1
             curr_tree = []
             
-    return render_template('query.html')
+    return render_template('query.html', start=start, end=end, lang=lang, idx=ticket)
 
 
 @app.route("/get_trees/<ticket>/<lang>/<int:start>/<int:end>")
@@ -146,7 +146,7 @@ def get_trees(ticket, lang, start, end):
         if l == '\n':
             
             for c in curr_tree:
-                if c.startswith('# lang: ' + lang):
+                if c.startswith('# lang: ' + lang) or (c.startswith('# lang: ') and lang in c):
                     if tc <= end and tc >= start:
                         trees.append(''.join(curr_tree[:]))
                     tc += 1

@@ -114,9 +114,9 @@ Langs: gg gs
 <td bgcolor="#00FF00" style="width: 574px;">
 
 
-    <input type="text" name="FirstName"> <div id="pgnum">120</div>
+    <input id="pgnum" type="text" name="FirstName"> <div id="pages">120</div>
 
-    <button type="button">Go</button>   <button type="button"><</button>   <button type="button">></button> 
+    <button id="gobtn" type="button">Go</button>   <button id="bbtn" type="button"><</button>   <button id="fwbtn" type="button">></button> 
 
     </td>
 
@@ -127,12 +127,13 @@ Langs: gg gs
 </table>
 <p>&nbsp;</p>
 <script>
-$( document ).ready(function() {
+function loadtrees(idx, start, end, lang){
 
     var target = document.getElementById( "query_result" );
 
-    //load results
-    $.get("/get_trees/2016642315595390675/b'pl'/1/25", function(data, status){
+    //$.get("/get_trees/2016642315595390675/b'pl'/1/25", function(data, status){
+
+    $.get("/get_trees/" + idx + "/" + lang + "/" + start + "/" + end, function(data, status){
        //alert("Data: " + data + "\nStatus: " + status);
        $('#query_result').html(data);
 
@@ -142,6 +143,55 @@ $( document ).ready(function() {
 
 
     });
+
+
+
+
+}
+
+var start = {{ start }};
+var end = {{ end }};
+var lang = "{{ lang }}";
+var idx = "{{ idx }}";
+
+$( document ).ready(function() {
+
+    //load results
+    loadtrees(idx, start, end, lang);
+
+    //page number
+    var pagelen = end - start
+    var pagenum = start/pagelen
+    $('#pgnum').val(pagenum);
+    
+    //page count
+    $.get("/get_result_count/" + idx, function(data, status){
+       $('#pages').html(Math.round(data/pagelen + 1));
+    });
+
+    //page buttons
+    $('#fwbtn').click(function() {
+        window.location.href = "/show/" + idx + "/" + lang + "/" + (start + pagelen) + "/" + (end + pagelen);
+    });
+
+    $('#bbtn').click(function() {
+        window.location.href = "/show/" + idx + "/" + lang + "/" + (start - pagelen) + "/" + (end - pagelen);
+    });
+
+    $('#gobtn').click(function() {
+        window.location.href = "/show/" + idx + "/" + lang + "/" + (parseInt($('#pgnum').val()) * pagelen) + "/" + ((parseInt($('#pgnum').val()) * pagelen) + pagelen);
+    });
+
+
+
+    //langs in q
+
+    //lang "tabs"
+
+    
+
+
+
      //
      //$(query_result).html("<td>Hello <b>World</b>!</td>");
 
