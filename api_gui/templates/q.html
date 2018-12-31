@@ -1,0 +1,107 @@
+<html>
+
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+
+<body>
+
+<dl class="dropdown"> 
+  
+    <dt>
+    <a href="#">
+      <span class="hida">Select DBs</span>    
+      <p class="multiSel"></p>  
+    </a>
+    </dt>
+  
+    <dd>
+        <div class="mutliSelect">
+            <ul id="dbs">
+                <li>
+                    <input type="checkbox" value="test" />test</li>
+            </ul>
+        </div>
+    </dd>
+</dl>
+
+
+<dl class="dropdown"> 
+  
+    <dt>
+    <a href="#">
+      <span class="hida">Select Langs</span>    
+      <p class="multiSel"></p>  
+    </a>
+    </dt>
+  
+    <dd>
+        <div class="mutliSelect">
+            <ul id="langs">
+                <li><input type="checkbox" value="pl" />pl</li>
+                <li><input type="checkbox" value="hi" />hi</li>
+            </ul>
+
+
+        </div>
+    </dd>
+</dl>
+
+
+<script>
+$(".dropdown dt a").on('click', function() {
+  $(".dropdown dd ul").slideToggle('fast');
+});
+
+$(".dropdown dd ul li a").on('click', function() {
+  $(".dropdown dd ul").hide();
+});
+
+function getSelectedValue(id) {
+  return $("#" + id).find("dt a span.value").html();
+}
+
+$(document).bind('click', function(e) {
+  var $clicked = $(e.target);
+  if (!$clicked.parents().hasClass("dropdown")) $(".dropdown dd ul").hide();
+});
+
+$('.mutliSelect input[type="checkbox"]').on('click', function() {
+
+  var title = $(this).closest('.mutliSelect').find('input[type="checkbox"]').val(),
+    title = $(this).val() + ",";
+
+  if ($(this).is(':checked')) {
+    var html = '<span title="' + title + '">' + title + '</span>';
+    $('.multiSel').append(html);
+    $(".hida").hide();
+  } else {
+    $('span[title="' + title + '"]').remove();
+    var ret = $(".hida");
+    $('.dropdown dt a').append(ret);
+
+  }
+});
+
+$( document ).ready(function() { 
+
+        $.getJSON("/get_dbs", function(data, status){
+        //alert(data)
+        var arrayLength = data.length;
+        for (var i = 0; i < arrayLength; i++) {
+          var text = document.createElement('li');
+          //text.innerHTML = "<input type="checkbox" value="Motorola" />" + data[i];
+          //$("#dbs").appendChild(text)
+          alert(data[i])
+        }
+    });
+
+
+
+});
+
+</script>
+
+</body>
+
+</html>

@@ -4,7 +4,6 @@
 <head>
 
      <meta charset="utf-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1">
      <meta name="description" content="">
      <meta name="author" content="">
  
@@ -89,42 +88,26 @@
 
 
 
-<table style="width: 574px;">
 <tbody>
-<tr>
-<td bgcolor="#00FF00" style="width: 574px;">
-
-<div id="queryinfo">
-Query: _ amod _
-Ticket: gsgsghshsr
-Langs: gg gs
+<div style="background-color:lightblue"  id="queryinfo">
+<div id="queryjs">
+</div>
 </div>
 
 
+<div>
+<div id='query_result'> &nbsp;</div>
+</div>
 
-</td>
-</tr>
-<tr>
-<td style="width: 574px;"><div id='query_result'> &nbsp;</div>
-
-</td>
-
-</tr>
-<tr>
-<td bgcolor="#00FF00" style="width: 574px;">
+<div style="background-color:lightblue">
 
 
     <input id="pgnum" type="text" name="FirstName"> <div id="pages">120</div>
 
     <button id="gobtn" type="button">Go</button>   <button id="bbtn" type="button"><</button>   <button id="fwbtn" type="button">></button> 
 
-    </td>
+</div>
 
-
-
-</tr>
-</tbody>
-</table>
 <p>&nbsp;</p>
 <script>
 function loadtrees(idx, start, end, lang){
@@ -153,6 +136,7 @@ var start = {{ start }};
 var end = {{ end }};
 var lang = "{{ lang }}";
 var idx = "{{ idx }}";
+var langs = []
 
 $( document ).ready(function() {
 
@@ -182,13 +166,48 @@ $( document ).ready(function() {
         window.location.href = "/show/" + idx + "/" + lang + "/" + (parseInt($('#pgnum').val()) * pagelen) + "/" + ((parseInt($('#pgnum').val()) * pagelen) + pagelen);
     });
 
-
-
     //langs in q
+    $.get("/get_result_langs/" + idx, function(data, status){
+        //
+        var arrayLength = data.length;
+        for (var i = 0; i < arrayLength; i++) {
+            var xx = data[i]
+            langs.push(xx)
+            //alert(data[i]);
+            //Add button
+            var button = document.createElement("button");
+            button.setAttribute("id", 'lang_btn');
+            button.innerHTML = data[i];
+
+            var body = document.getElementById("queryinfo");
+            body.appendChild(button);
+            //alert(body);
+            button.addEventListener ("click", function() {
+                window.location.href = "/show/" + idx + "/" + xx + "/0/" + pagelen;
+            });
+            //Add link
+         
+        }
+    
+
+    });    
+
+    //Lang button links
+    //var body = document.getElementsById("lang_btn");
+    //alert("ebin");
+
+    //$('#pages').html(Math.round(data/pagelen + 1));
+
+    $.get("/query_info/" + idx, function(xdata, status){
+        console.log(xdata);
+        var text = document.createTextNode(xdata);
+        //alert(xdata);
+        $('#queryjs').append(text);
+    }); 
+
 
     //lang "tabs"
 
-    
 
 
 

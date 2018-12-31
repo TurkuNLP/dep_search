@@ -5,6 +5,7 @@ import time
 from flask import render_template, send_from_directory
 from flask import Flask, Markup
 import flask
+import json
 
 app = Flask(__name__)
 
@@ -19,14 +20,19 @@ def send_js(path):
     return send_from_directory('static', path)
 
 
+@app.route("/")
+def mnf():
+    return render_template("qx.html")
+
 
 @app.route("/get_dbs")
-def gdb(ticket):
+def gdb():
     inf = open('dbs.json','rt')
     dbs = json.load(inf)
     inf.close()
     xx = []
-    for k,v in dbs:
+    print (dbs)
+    for k in dbs:
         xx.append(k)
     return jsonify(xx)
 
@@ -39,23 +45,45 @@ def dbl(db):
     
     inf = open(dbs[db] + '/langs', 'rt')
     
-    xx = '[' + ','.join(inf.readlines()) + ']'
-    inf.close()
+    xx = []
+    for ln in inf:
+        xx.append(ln.strip())
 
-    return xx
+    inf.close()
+    print (xx)
+    return jsonify(xx)
 
 @app.route("/start_query/<dbs>/<query>/<langs>")
 def hello_q(dbs, query, langs):
 
+    inf = open('dbs.json','rt')
+    xdbs = json.load(inf)
+    inf.close()
 
     #Replace with call
 
     ticket = unique_id()
     query_py = 'cd ..;python3 query.py'
-    cmd = query_py + ' -d ' + dbs + ' -m 0 --langs ' + langs + ' ' + query
+    cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' ' + query
     os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
 
+    outf = open('./res/' + ticket + '.json','wt')
+    outf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket}))
+    outf.close()
+
+    print (cmd)
+
     return ticket
+
+@app.route("/query_info/<ticket>")
+def qinf(ticket):
+    try:
+        inf = open('./res/' + ticket + '.json','rt')
+        rr = inf.read()
+        inf.close()
+    except:
+        rr = '{}'
+    return rr
 
 @app.route("/kill_query/<ticket>")
 def kill_q(ticket):
