@@ -6,7 +6,8 @@ cimport py_tree
 import os
 import copy
 import json
-
+import pysolr
+import requests
 
 class SDB():
 
