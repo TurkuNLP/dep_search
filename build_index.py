@@ -12,7 +12,7 @@ import json
 import re
 import struct
 import os
-import setlib.pytset as pytset
+import dep_search.setlib.pytset as pytset
 import zlib
 import itertools
 #import py_tree_lmdb
@@ -87,8 +87,16 @@ def get_doc_url(comments):
         return None
 
 def write_db_json(args):
+    try:
+        os.mkdir(args.dir)
+    except:
+        pass
 
-    outf = open(args.dir+'/langs', 'at')
+    if os.path.exists(args.dir+'/langs'):
+        outf = open(args.dir+'/langs', 'at')
+    else:
+        outf = open(args.dir+'/langs', 'wt')
+
     outf.write(args.lang + '\n')
     outf.close()
 
