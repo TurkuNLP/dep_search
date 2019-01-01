@@ -64,7 +64,7 @@ def hello_q(dbs, query, langs):
 
     ticket = unique_id()
     query_py = 'cd ..;python3 query.py'
-    cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' ' + query
+    cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
     os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
 
     outf = open('./res/' + ticket + '.json','wt')
