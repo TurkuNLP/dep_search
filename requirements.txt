@@ -1,0 +1,4 @@
+cython
+lmdb
+pysolr
+plyvel
