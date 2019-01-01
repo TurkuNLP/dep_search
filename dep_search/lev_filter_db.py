@@ -209,7 +209,7 @@ class Query():
                 hits += 1
 
     def get_lang(self, idx):
-        return self.db.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'))
+        return self.db.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8')).decode('utf8')
 
     def get_count(self, pref):
         counter = 0
