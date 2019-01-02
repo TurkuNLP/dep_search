@@ -58,8 +58,12 @@ $( document ).ready(function() {
 
             console.log(data);
             //append to langs
+            lang_list = [];
             for (var xitem in data){
-                $('#langs').append('<input type="checkbox" class="bln" name="ln_' + data[xitem] + '" value="' + data[xitem] +'">' + data[xitem] + '<br>');
+                if ($.inArray(data[xitem], lang_list) == -1) {
+                    $('#langs').append('<input type="checkbox" class="bln" name="ln_' + data[xitem] + '" value="' + data[xitem] +'">' + data[xitem] + '<br>');
+                }
+                lang_list.push(data[xitem]);
             }
             });
         }

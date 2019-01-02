@@ -25,13 +25,6 @@ $ cat ./test_data/ud/ud-treebanks-v2.3/UD_Hindi-HDTB/hi_hdtb-ud-train.conllu | p
 $ cat ./test_data/ud/ud-treebanks-v2.3/UD_Arabic-NYUAD/ar_nyuad-ud-train.conllu | python3 build_index.py --filterdb lev_filter_db --lang ar --d all_ud_db
 ~~~~
 
-Similarly, but to use only solr:
-~~~~
-$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Polish-SZ/pl_sz-ud-train.conllu | python3 build_index.py --blobdb solr_blob_db --lang pl --d all_ud_db
-$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Hindi-HDTB/hi_hdtb-ud-train.conllu | python3 build_index.py  --blobdb solr_blob_db --lang hi --d all_ud_db
-$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Arabic-NYUAD/ar_nyuad-ud-train.conllu | python3 build_index.py --blobdb solr_blob_db --lang ar --d all_ud_db
-~~~~
-
 
 #### Available db modules:
 * Solr

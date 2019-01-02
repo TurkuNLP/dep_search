@@ -8,6 +8,7 @@ import copy
 import json
 import pysolr
 import requests
+import base64
 
 class SDB():
 
@@ -15,22 +16,37 @@ class SDB():
         self.solr_url = solr_url
 
     def put(self, key, value):
+        key=key.replace(b':',b'--')
+        #print ('put!!!!', type(key))
         s=pysolr.Solr(self.solr_url,timeout=600)
-        s.add({'key': key, 'value': value})
+        s.add([{'key': key.decode('utf8'), 'value': base64.b64encode(value)}])
         s.commit()
 
-    def get(self, key):        
-        r=requests.get(self.solr_url+"/select",data={u"q":u"key:" + key,u"wt":u"json",u"rows":1})
+    def get(self, key):
+        #print ('get',type(key))
+        key=key.replace(b':',b'--')        
+        r=requests.get(self.solr_url+"/select",data={u"q":u'key:"' + key.decode('utf8') + '"',u"wt":u"json",u"rows":1})
         response=json.loads(r.text)
-        return response['value']
+        #print ('get', r.text)
+        #print (response['response'])
+        try:
+            #print (':)')
+            return base64.b64decode(response['response']['docs'][0]['value'][0])
+        except:
+            return None
 
     def get_count(self, prefix):
         #prob doesnt work
         s=pysolr.Solr(self.solr_url,timeout=600)
-        r=requests.get(self.solr_url+"/select",data={u"q":u"key:"+prefix+u'*',u"stats.field":"id",u"stats":u"true",u"wt":u"json",u"rows":0})
-        response=json.loads(r.text)
-        max_id=response["stats"]["stats_fields"]["id"]["max"]
-        return max_id
+        r=requests.get(self.solr_url+"/select",data={u"q":u"key:"+prefix+u'*',u"stats.field":"key",u"stats":u"true",u"wt":u"json",u"rows":0})
+
+        try:
+            response=json.loads(r.text)
+            #print (r.text)
+            max_id=response["stats"]["stats_fields"]["key"]["count"]
+            return str(max_id).encode('utf8')
+        except:
+            return str(0).encode('utf8')
 
     def commit(self):
         pysolr.Solr(self.solr_url,timeout=600).commit()
@@ -79,7 +95,13 @@ class DB(BaseDB):
         return self.db.get(('tag_' + idx).encode('utf8')) != None
     #
     def get_id_for(self, idx):
-        return int(self.db.get(('tag_' + idx).encode('utf8')))
+        try:
+            xxx = self.db.get(('tag_' + idx).encode('utf8'))
+            #print ('!!!', xxx)
+            return int(xxx)
+        except:
+            #print (':O', idx)
+            return None
 
     #
     def store_a_vocab_item(self, item):
@@ -110,11 +132,5 @@ class DB(BaseDB):
         self.close()
 
     def get_count(self, pref):
-        counter = 0
 
-        if isinstance(pref, str):
-            pref = pref.encode('utf8')
-
-        for key, value in self.db.iterator(prefix=pref):
-            counter += 1
-        return str(counter).encode('utf8')
+        return self.db.get_count(pref)
