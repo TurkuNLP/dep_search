@@ -212,7 +212,7 @@ def yield_trees(src):
     current_tree=[]
     current_comment=[]
     current_context=u""
-    for line in src:
+    for line in src[:-1]:
         if line.startswith(u"# visual-style"):
             current_tree.append(line)
         elif line.startswith(u"# URL:"):
