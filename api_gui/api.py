@@ -6,8 +6,42 @@ from flask import render_template, send_from_directory
 from flask import Flask, Markup
 import flask
 import json
+from multiprocessing import Process
+import subprocess
 
 app = Flask(__name__)
+
+
+def query_process(dbs, query, langs, ticket):
+
+    inf = open('dbs.json','rt')
+    xdbs = json.load(inf)
+    inf.close()
+
+    #Replace with call
+    #open res file
+    outf = open('res/'+ticket,'w')
+
+    #query_py = 'cd ..;python3 query.py'
+    #cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
+    #os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
+    p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', '0', '--langs', langs, query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+    xoutf = open('./res/' + ticket + '.json','wt')
+    xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket}))
+    xoutf.close()
+
+
+    for l in p.communicate():
+        #write to res file
+        try:
+            outf.write(l.decode('utf8'))
+            outf.flush()
+        except:
+            pass
+        #flush!!
+    #print (cmd)
+    outf.close()
 
 #https://stackoverflow.com/questions/34344836/will-hashtime-time-always-be-unique
 def unique_id():
@@ -56,23 +90,9 @@ def dbl(db):
 @app.route("/start_query/<dbs>/<query>/<langs>")
 def hello_q(dbs, query, langs):
 
-    inf = open('dbs.json','rt')
-    xdbs = json.load(inf)
-    inf.close()
-
-    #Replace with call
-
     ticket = unique_id()
-    query_py = 'cd ..;python3 query.py'
-    cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
-    os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
-
-    outf = open('./res/' + ticket + '.json','wt')
-    outf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket}))
-    outf.close()
-
-    print (cmd)
-
+    p = Process(target=query_process, args=(dbs,query, langs, ticket))
+    p.start()
     return ticket
 
 @app.route("/query_info/<ticket>")
