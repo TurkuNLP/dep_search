@@ -2,3 +2,5 @@ cython
 lmdb
 pysolr
 plyvel
+flask
+ply

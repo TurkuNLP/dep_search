@@ -6,7 +6,13 @@
 A python3 toolkit for dependency tree search.
 
 ### Install
-TBW
+
+cat ubuntu_18.10.needed_packages | xargs sudo apt-get install -y
+pip3 install -r requirements.txt
+
+git submodule init
+git submodule update
+make
 
 #### Solr
 Core-configuration for Solr is included as folder solr_config, and is tested with Solr 6.6.5
