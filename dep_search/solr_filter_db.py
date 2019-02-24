@@ -227,6 +227,50 @@ class IDX(object):
         self.url=url
         self.lang=lang
         #self.documents.append({u"id":self.next_id(),u"url":url,u"lang":lang,u"_childDocuments_":[]})
+
+    def add_to_idx_with_id(self, comments, conllu, idx):
+        """ 
+        id - integer id
+        conllu - list of lists as usual
+        """
+        
+        feats=set()
+        words=[]
+        lemmas=[]
+        relations=set()
+
+        for cols in conllu:
+            feats.add(cols[UPOS])
+            if cols[FEATS]!=u"_":
+                feats|=set(cols[FEATS].split(u"|"))
+            words.append(cols[FORM])
+            lemmas.append(cols[LEMMA])
+            if cols[DEPREL]!=u"root":
+                relations.add(cols[DEPREL])
+            if cols[DEPS]!=u"_":
+                for g_dtype in cols[DEPS].split(u"|"):
+                    g,dtype=g_dtype.split(u":",1)
+                    if dtype!=u"root":
+                        relations.add(dtype)
+        d={}
+        d[u"id"]=idx
+        d[u"words"]=u" ".join(words)
+        d[u"lemmas"]=u" ".join(lemmas)
+        if feats:
+            d[u"feats"]=list(feats)
+        if relations:
+            d[u"relations"]=list(relations)
+        d[u"url"]=self.url
+        d[u"lang"]=self.lang
+        d[u"source"]=self.source
+
+        self.documents.append(d)
+        self.commit(force=True)
+        
+        return d[u"id"]
+
+
+
         
     def add_to_idx(self, comments, conllu):
         """ 

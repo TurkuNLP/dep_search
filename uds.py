@@ -4,7 +4,7 @@ import glob
 def main():
 
     pairs = []
-    for f in glob.glob('./uds/UD_*'):
+    for f in glob.glob('./uds/UD_*')[:15]:
         try:
             #print (f)
             #print (f.split('_')[1].split('-')[0])

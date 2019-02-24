@@ -247,7 +247,7 @@ def load(pyxFile):
     """Loads a search pyx file, returns the module"""
     ###I need to hack around this, because this thing is messing stdout
     #cythonize -a -i xxx.pyx
-    error=subprocess.call(["cythonize","-a","-i",'./dep_search/' + pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
+    error=subprocess.call(["/home/mjluot/.local/bin/cythonize","-a","-i",'./dep_search/' + pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
     if error!=0:
         sys.exit(1)
     mod=importlib.import_module('dep_search.' + pyxFile)
@@ -260,10 +260,10 @@ def get_url(comments):
     return None
 
 
-def query_from_db(q_obj, args, db, fdb):
+def query_from_db(q_obj, args, db, fdb, set_id_db):
 
     #init the dbs
-    q_obj.set_db(db)
+    q_obj.set_db(set_id_db)
 
     #This is a first try and an example without filter db
     idx = 1
@@ -279,6 +279,9 @@ def query_from_db(q_obj, args, db, fdb):
         try:
             #print ('???')
             idx = q.get()
+            #print (idx)
+            #continue
+
             #print ('xxx', idx)
             if idx == -1:
                 end_cnt += 1
@@ -379,95 +382,6 @@ def query_from_db(q_obj, args, db, fdb):
 
        # for range, I suppose, stop @ db error 
 
-
-
-
-def old_query_from_db(q_obj,args):
-
-    #args -> the command line args
-    start = time.time()
-    db=db_util.DB()
-    db.open(solr_url, db_name)
-
-    rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, solr_or_groups = map_set_id(query_obj.query_fields, db, query_obj)
-
-    db.init_lmdb(c_args_s, c_args_m, rarest)
-    q_obj.set_db_options(just_all_set_ids, types, optional)    
-
-    try:
-        extra_params= ast.literal_eval(args.extra_solr_params)
-    except:
-        extra_params = {}
-
-    from solr_query_thread import SolrQuery
-    solr_q = SolrQuery(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, case, q_obj, extra_params=extra_params)
-
-    tree_id_queue = solr_q.get_queue()
-
-    counter = 0
-    while (not solr_q.finished or not tree_id_queue.empty()):
-        idx = tree_id_queue.get()
-        if idx == -1:break
-        try:
-            err = db.xset_tree_to_id(idx)
-            if err != 0: continue
-            res_set = q_obj.check_tree_id(idx, db)    
-
-            if len(res_set) > 0:
-                #Get the tree text:
-                hit = db.get_tree_text()
-                tree_comms = db.get_tree_comms()
-                tree_lines=hit.split("\n")
-                if counter >= max_hits and max_hits > 0:
-                    break
-                its_a_hit = False
-                for r in res_set:   
-                    print ("# db_tree_id:",idx)
-                    print ("# visual-style\t" + str(r + 1) + "\tbgColor:lightgreen")
-                    try:
-                        print ("# hittoken:\t"+tree_lines[r].encode('utf8'))
-                        its_a_hit = True 
-                    except:
-                        pass#import traceback; traceback.print_exc()
-                #hittoken once the tree is really here!
-                if its_a_hit:
-
-                    if args.context>0:
-                        hit_url=get_url(tree_comms)
-                        texts=[]
-                        # get +/- context sentences from db
-                        for i in range(idx-args.context,idx+args.context+1):
-                            if i==idx:
-                                data=hit
-                            else:
-                                err = db.xset_tree_to_id(i)
-                                if err != 0: continue
-                                data = db.get_tree_text()
-                                data_comment = db.get_tree_comms()
-
-                                if data is None or get_url(data_comment)!=hit_url:
-                                    continue
-                            text=u" ".join(t.split(u"\t",2)[1] for t in data.split(u"\n"))
-                            if i<idx:
-                                texts.append(u"# context-before: "+text)
-                            elif i==idx:
-                                texts.append(u"# context-hit: "+text)
-                            else:
-                                texts.append(u"# context-after: "+text)
-                        print (u"\n".join(text for text in texts)).encode(u"utf-8")
-
-                    print (tree_comms.encode('utf8'))
-                    print (hit.encode('utf8'))
-                    print ()
-                    counter += 1
-
-        except: pass#import traceback; traceback.print_exc()
-
-
-    solr_q.kill()         
-    print >> sys.stderr, "Found %d trees in %.3fs time"%(counter,time.time()-start)
-    return counter
-    
 def main(argv):
     global query_obj
 
@@ -514,6 +428,9 @@ def main_db_query(args):
     db = db_class.DB(db_args['dir'])
     db.open()
 
+    set_id_db = db_class.DB(db_args['dir'])
+    set_id_db.open(foldername = '/set_id_db/')
+
     solr_url = db_args['solr']
 
     if args.output is not None:
@@ -536,39 +453,6 @@ def main_db_query(args):
         except:
             pass
 
-        #load pickle db here
-        #db = DB.PickleDB(args.database)
-
-        #here should in the future be a loop to handle multile databases
-   #     fdb_class = importlib.import_module(db_args['filterdb'])
-
-   #     '''
-   #class Query():
-
-   # def __init__(self,extra_terms, compulsory_items,or_groups, solr, case, q_obj, extra_params={}):
-
-   #     '''
-    #rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, solr_or_groups = map_set_id(query_obj.query_fields, db, query_obj)
-
-    #db.init_lmdb(c_args_s, c_args_m, rarest)
-    #q_obj.set_db_options(just_all_set_ids, types, optional)
-
-    #try:
-    #    extra_params= ast.literal_eval(args.extra_solr_params)
-    #except:
-    #    extra_params = {}
-
-    #    if not db_args['filterdb'] == 'solr_filter_db':
-    #         solr_q = SolrQuery(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, db_args['dir'], case, q_obj, extra_params=extra_params)
-    #    else:
-    #         solr_q = SolrQuery(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, case, q_obj, extra_params=extra_params)
-
-
-    #fdb = fdb_class.Query(db_args['dir'])
-    #fdb.open()
-
-        #import pdb;pdb.set_trace()
-
 
         json_filename = '' 
 
@@ -576,7 +460,7 @@ def main_db_query(args):
         if not os.path.isfile(query_folder + temp_file_name):
             f = open('./dep_search/qry_' + m.hexdigest() + '.pyx', 'wt')
             try:
-                pseudocode_ob.generate_and_write_search_code_from_expression(args.search, f, json_filename=json_filename, db=db, case=args.case)
+                pseudocode_ob.generate_and_write_search_code_from_expression(args.search, f, json_filename=json_filename, db=set_id_db, case=args.case)
             except Exception as e:
                 os.remove(temp_file_name)
                 raise e
@@ -610,7 +494,7 @@ def main_db_query(args):
 
     #... and lets load the filter db for fetching the filter list
     fdb_class = importlib.import_module(db_args['filterdb'])
-    rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, solr_or_groups = query_obj.map_set_id(db)
+    rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, solr_or_groups = query_obj.map_set_id(set_id_db)
 
     try:
         extra_params= ast.literal_eval(args.extra_solr_params)
@@ -630,7 +514,7 @@ def main_db_query(args):
     else:
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
 
-    total_hits+=query_from_db(query_obj, args, db, fdb)
+    total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db)
     print ("Total number of hits:",total_hits,file=sys.stderr)
 
     if not args.keep_query:

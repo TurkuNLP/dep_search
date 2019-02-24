@@ -14,16 +14,17 @@ class DB(BaseDB):
         self.s=py_tree.Py_Tree()
         self.name = name
         self.blob = None
+        self.next_free_tag_id = None
 
     #
-    def open(self):
+    def open(self, foldername='/leveldb/'):
         #check if pickle exists
         try:
             os.mkdir(self.name)
         except:
             pass
 
-        self.db = plyvel.DB(self.name + '/leveldb/', create_if_missing=True) 
+        self.db = plyvel.DB(self.name + foldername, create_if_missing=True) 
 
     #
     def close(self):
@@ -47,7 +48,11 @@ class DB(BaseDB):
     #
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
-            self.db.put(('tag_' + item).encode('utf8'), self.get_count('tag_'))
+            if self.next_free_tag_id == None:
+                self.next_free_tag_id = int(self.get_count('tag_'))
+
+            self.db.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
+            self.next_free_tag_id += 1
 
     #
     def store_blob(self, blob, blob_idx):

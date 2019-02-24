@@ -14,16 +14,17 @@ class DB(BaseDB):
         self.s=py_tree.Py_Tree()
         self.name = name
         self.blob = None
+        self.next_free_tag_id = None
 
     #
-    def open(self):
+    def open(self, foldername='/lmdb/'):
         #check if pickle exists
         try:
             os.mkdir(self.name)
         except:
             pass
 
-        self.env = lmdb.open(self.name + '/lmdb/', max_dbs=2, map_size=10485760*1000)
+        self.env = lmdb.open(self.name + foldername, max_dbs=2, map_size=10485760*1000)
         #self.blob_db = self.env.open_db(b'blob')
         #self.set_db = self.env.open_db(b'sets')
 
@@ -61,10 +62,20 @@ class DB(BaseDB):
     #
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
-            #print ('store', item)
-            self.txn.put(('tag_' + item).encode('utf8'), self.get_count('tag_'))
+            if self.next_free_tag_id == None:
+                self.next_free_tag_id = int(self.get_count('tag_'))
+
+            self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
             self.txn.commit()
             self.txn = self.env.begin(write=True)
+
+
+            #self.db.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
+            self.next_free_tag_id += 1
+
+
+            #print ('store', item)
+
     #
     def store_blob(self, blob, blob_idx):
         #print (('blob_' + str(blob_idx)).encode('utf8'))

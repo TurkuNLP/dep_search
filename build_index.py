@@ -22,10 +22,15 @@ import binascii
 #import db_util
 #import DB
 #import Blobldb 
+import time
 
 ID,FORM,LEMMA,UPOS,XPOS,FEATS,HEAD,DEPREL,DEPS,MISC=range(10)
 
 symbs=re.compile(r"[^A-Za-z0-9_]",re.U)
+
+
+def mean(numbers):
+    return float(sum(numbers)) / max(len(numbers), 1)
 
 def read_conll(inp,maxsent=0,skipfirst=0):
     """ Read conll format file and yield one sentence at a time as a list of lists of columns. If inp is a string it will be interpreted as fi
@@ -142,6 +147,7 @@ if __name__=="__main__":
     #pkg_loader = importlib.find_loader('dep_search')
     #pkg = pkg_loader.load_module()
 
+    set_id_db = importlib.import_module(args.blobdb)
     blob_db = importlib.import_module(args.blobdb)
     filter_db = importlib.import_module(args.filterdb)
 
@@ -151,6 +157,10 @@ if __name__=="__main__":
     db = blob_db.DB(args.dir)
     db.open()
     solr_idx=filter_db.IDX(args)
+
+    set_id_db = blob_db.DB(args.dir)
+    set_id_db.open(foldername='/set_id_db/')
+
         
     src_data=read_conll(sys.stdin, args.max, args.skip_first)
     set_dict={}
@@ -164,6 +174,15 @@ if __name__=="__main__":
     
     sent_limit = 256
 
+    count_ones_own_idx = False
+    self_idx = 0
+
+
+    s_db_times = []
+    f_db_times = []
+    b_db_times = []
+
+
     print ()
     print ()
     for counter,(sent,comments) in enumerate(src_data):
@@ -173,11 +192,24 @@ if __name__=="__main__":
         if max(len(cols[FORM]) for cols in sent)>50 or max(len(cols[LEMMA]) for cols in sent)>50:
             continue
 
-        if (counter+1)%10000 == 0:
-            print ("At tree ", counter+1)
+        if (counter+1)%100 == 0:
+
+            print (counter+1,',',mean(s_db_times),',',mean(f_db_times),',',mean(b_db_times),',')
+            #print (mean(f_db_times))
+            #print (mean(b_db_times))
+
+            s_db_times = []
+            f_db_times = []
+            b_db_times = []
+
+            #print ("At tree ", counter+1)
             sys.stdout.flush()
+
         s=py_tree.Py_Tree()
-        blob, form =s.serialize_from_conllu(sent,comments,db) #Form is the struct module format for the blob, not used anywhere really
+        start = time.time()
+        blob, form =s.serialize_from_conllu(sent,comments,set_id_db) #Form is the struct module format for the blob, not used anywhere really
+        end = time.time()
+        s_db_times.append(end-start)
 
         s.deserialize(blob)
         lengths+=len(sent)
@@ -194,8 +226,23 @@ if __name__=="__main__":
                 solr_idx.new_doc(doc_url,args.lang)
         except:
             pass
-        tree_id=solr_idx.add_to_idx(comments, sent)
-        db.store_blob(blob, tree_id)
+
+        if not count_ones_own_idx:
+            tree_id=solr_idx.add_to_idx(comments, sent)
+            db.store_blob(blob, tree_id)
+            count_ones_own_idx = True
+            self_idx = tree_id
+        else:
+            self_idx += 1
+            start = time.time()
+            solr_idx.add_to_idx_with_id(comments, sent, self_idx)
+            end = time.time()
+            f_db_times.append(end-start)
+
+            start = time.time()
+            db.store_blob(blob, self_idx)
+            end = time.time()
+            b_db_times.append(end-start)
 
     else:
         ###

@@ -132,11 +132,25 @@ function loadtrees(idx, start, end, lang){
 
 }
 
+
+
+var xpagelen = "";
 var start = {{ start }};
 var end = {{ end }};
 var lang = "{{ lang }}";
 var idx = "{{ idx }}";
 var langs = []
+
+
+function xmove(xx){
+
+    console.log(xx["lang"]);
+    window.location.href = "/show/" + idx + "/" + xx["lang"] + "/0/" + xpagelen;
+
+
+}
+
+
 
 $( document ).ready(function() {
 
@@ -146,6 +160,7 @@ $( document ).ready(function() {
     //page number
     var pagelen = end - start
     var pagenum = start/pagelen
+    xpagelen = pagelen;
     $('#pgnum').val(pagenum);
     
     //page count
@@ -171,23 +186,40 @@ $( document ).ready(function() {
         //
         var arrayLength = data.length;
         for (var i = 0; i < arrayLength; i++) {
-            var xx = data[i]
-            langs.push(xx)
+            var xx = data[i];
+            langs.push(xx);
             //alert(data[i]);
             //Add button
             var button = document.createElement("button");
-            button.setAttribute("id", 'lang_btn');
+            button.setAttribute("id", "lang_btn_" + xx);
+            button.setAttribute("lang", xx);
+            button.setAttribute("onclick", "xmove(this);");
             button.innerHTML = data[i];
 
             var body = document.getElementById("queryinfo");
             body.appendChild(button);
             //alert(body);
-            button.addEventListener ("click", function() {
-                window.location.href = "/show/" + idx + "/" + xx + "/0/" + pagelen;
-            });
+
             //Add link
          
         }
+
+    var arrayLength = langs.length;
+    console.log(arrayLength);
+    console.log(langs);
+    for (var i = 0; i < arrayLength; i++) {
+
+        //get button
+        var xx = "" + langs[i];
+        console.log(xx);
+        var button = document.getElementById("lang_btn_" + xx);
+
+        //add el
+
+
+    }
+
+
     
 
     });    
@@ -204,6 +236,11 @@ $( document ).ready(function() {
         //alert(xdata);
         $('#queryjs').append(text);
     }); 
+
+
+
+
+
 
 
     //lang "tabs"

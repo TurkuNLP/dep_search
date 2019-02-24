@@ -242,6 +242,29 @@ class IDX(object):
         self.url=url
         self.lang=lang
 
+    def add_to_idx_with_id(self, comments, sent, idx):
+        # get set ids
+        val = self.set_idx_to_db_idx(self.s.set_list_from_conllu(sent, comments))
+        #import pdb;pdb.set_trace()
+        #print (val)
+        #idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
+        for v in val:
+            self.txn.put((v + '_' + str(idx)).encode('utf8'), b'1')
+            self.txn.commit()
+            self.txn = self.env.begin(write=True)
+        #self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
+        #self.txn.put('tag_'.encode('utf8'), b'1')
+        self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8'))
+        self.txn.commit()
+        self.txn = self.env.begin(write=True)
+        self.txn.put('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1')
+        self.txn.commit()
+        #self.txn = self.env.begin(write=True)
+        self.txn = self.env.begin(write=True)
+        return idx
+
+
+
     def add_to_idx(self, comments, sent):
         # get set ids
         val = self.set_idx_to_db_idx(self.s.set_list_from_conllu(sent, comments))

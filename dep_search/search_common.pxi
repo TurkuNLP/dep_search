@@ -1,5 +1,6 @@
 import sys
 sys.path.append('./dep_search/')
+sys.path.append('./dep_search/setlib')
 from libcpp cimport bool
 #from db_util cimport DB
 from setlib.pytset cimport PyTSet, PyTSetArray

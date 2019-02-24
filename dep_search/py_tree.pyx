@@ -157,6 +157,7 @@ cdef class Py_Tree:
         #Produces the packed map data
         map_lengths=[]
         map_data=b""
+        #print (arrays)
         for map_num,pairs in sorted(arrays.iteritems()):
             pairs_packed=b"".join(struct.pack("=HH",*pair) for pair in sorted(pairs))
             map_lengths.append(len(pairs_packed))
@@ -208,6 +209,8 @@ cdef class Py_Tree:
         #print '<ARGS>'
         #print args
         #print '</ARGS>'
+
+        #print (args)
 
         serialized=struct.pack(blob,*args)
         #print "serializer:", len(lines),len(token_sets),len(arrays), len(set_data), len(map_data), len(tree_data_gz), map_lengths, sorted(token_sets)
