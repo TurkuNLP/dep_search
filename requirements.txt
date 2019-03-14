@@ -4,3 +4,8 @@ pysolr
 plyvel
 flask
 ply
+cython
+plyvel
+pysolr
+ply
+flask
