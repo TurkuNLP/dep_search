@@ -8,6 +8,7 @@ import flask
 import json
 from multiprocessing import Process
 import subprocess
+import argparse
 
 app = Flask(__name__)
 
@@ -254,4 +255,9 @@ current_context=u""
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port= 81,debug=True)
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--port', type=int, default=8089, help='Port. Default %(default)d.')
+    parser.add_argument('--host', default='127.0.0.1', help='Host. Default %(default)s.')
+    parser.add_argument('--debug', default=False, action="store_true", help='Flask debug mode')
+    args = parser.parse_args()
+    app.run(host=args.host, port=args.port,debug=args.debug)
