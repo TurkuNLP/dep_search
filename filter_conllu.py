@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from dep_search import *
+sys.path.append('./dep_search/')
 import time
 import sys
 import os
