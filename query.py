@@ -247,7 +247,7 @@ def load(pyxFile):
     """Loads a search pyx file, returns the module"""
     ###I need to hack around this, because this thing is messing stdout
     #cythonize -a -i xxx.pyx
-    error=subprocess.call(["/home/mjluot/.local/bin/cythonize","-a","-i",'./dep_search/' + pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
+    error=subprocess.call(["cythonize","-a","-i",'./dep_search/' + pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
     if error!=0:
         sys.exit(1)
     mod=importlib.import_module('dep_search.' + pyxFile)
