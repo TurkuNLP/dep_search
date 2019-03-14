@@ -92,6 +92,10 @@
 <div style="background-color:lightblue"  id="queryinfo">
 <div id="queryjs">
 </div>
+<div id="qff">
+</div>
+<div id="err">
+</div>
 </div>
 
 
@@ -237,8 +241,22 @@ $( document ).ready(function() {
         $('#queryjs').append(text);
     }); 
 
-
-
+    $.get("/is_query_finished/" + idx, function(xdata, status){
+        console.log(xdata);
+        var infoxx = "Query is still running ...";
+        if (xdata){
+            infoxx = "Query has finished!";
+        }
+        var text = document.createTextNode(infoxx);
+        //alert(xdata);
+        $('#qff').append(text);
+    }); 
+    $.get("/get_err/" + idx, function(xdata, status){
+        console.log(xdata);
+        var text = document.createTextNode(xdata);
+        //alert(xdata);
+        $('#err').append(text);
+    }); 
 
 
 

@@ -23,6 +23,12 @@ DBs<br>
 
 
 <script>
+
+function prependChild(parentEle, newFirstChildEle) {
+    parentEle.insertBefore(newFirstChildEle, parentEle.firstChild)
+}
+
+
 $( document ).ready(function() { 
 
         $.getJSON("/get_dbs", function(data, status){
@@ -112,22 +118,24 @@ $( document ).ready(function() {
             db_str = db_str + dbs[lang];
         }        
 
+
         //launch
         $.get('/start_query/'+db_str+'/'+ query + '/' + lang_str, function(data, status){
             //"/show/<ticket>/<lang>/<int:start>/<int:end>"
             //document.body.append('<a href="/show/' + data + '/' + langs[0] + '/0/10' + '">' + query + '</a>');
             //console.log(data);
             var a = document.createElement('a');
-            var linkText = document.createTextNode(query + ' ' + lang_str + ' ' + db_str + ' ' + data);
+            var linkText = document.createTextNode(query + '  ' + lang_str + '  ' + db_str);
             a.appendChild(linkText);
-            a.title = "my title text";
             a.href = '/show/' + data + '/' + langs[0] + '/0/10';
             document.body.appendChild(a);
+            //$('#langs').insertAdjacentElement('afterend', a)
             var a = document.createElement('br');
             document.body.appendChild(a);
+            //$('#langs').insertAdjacentElement('afterend', a)
+            window.open('/show/' + data + '/' + langs[0] + '/0/10', '_blank');
 
         });
-
 
     });
 

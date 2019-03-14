@@ -9,6 +9,7 @@ import json
 from multiprocessing import Process
 import subprocess
 import argparse
+from flask import Response
 
 app = Flask(__name__)
 
@@ -22,38 +23,100 @@ def query_process(dbs, query, langs, ticket):
     #Replace with call
     #open res file
     outf = open('res/'+ticket,'w')
+    outf_err = open('res/'+ticket+'.err','w')
+
 
     #query_py = 'cd ..;python3 query.py'
     #cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
     #os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
-    p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', '0', '--langs', langs, query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    limit = 5000
+
+
+    if len(langs) > 0:
+        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--langs', langs, query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    else:
+        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 
     xoutf = open('./res/' + ticket + '.json','wt')
     xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket}))
     xoutf.close()
 
+    '''
+    for l, err in p.communicate():
+        #write to res file
+        try:
+            outf.write(l.decode('utf8'))
+            outf.flush()
 
-    for l in p.communicate():
+            outf_err.write(err.decode('utf8'))
+            outf_err.flush()
+        except:
+            pass
+        #flush!!
+    #print (cmd)
+    outf.close()
+    '''
+
+    for l in p.stdout:
         #write to res file
         try:
             outf.write(l.decode('utf8'))
             outf.flush()
         except:
             pass
+
+    for l in p.stderr:
+        #write to res file
+        try:
+            outf_err.write(l.decode('utf8'))
+            outf_err.flush()
+        except:
+            pass
+
+
         #flush!!
     #print (cmd)
     outf.close()
+
+
+
+    #mark its done!
+    outf = open('res/'+ticket+'.done','w')
+    outf.close()
+
+
+@app.route('/do_query/<dbs>/<query>/<m>/<langs>/')
+def xxquery_process(dbs, query, m, langs):
+
+    inf = open('dbs.json','rt')
+    xdbs = json.load(inf)
+    inf.close()
+
+    #query_py = 'cd ..;python3 query.py'
+    #cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
+    #os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
+    limit = 5000
+
+    if len(langs) > 0:
+        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', m, '--langs', langs, query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    else:
+        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', m, query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def generate():
+        for oo in p.stdout:
+            yield oo
+
+    return Response(generate(), mimetype='text')
 
 #https://stackoverflow.com/questions/34344836/will-hashtime-time-always-be-unique
 def unique_id():
     return str(hash(time.time()))
 
-
 @app.route('/static/<path:path>')
 def send_js(path):
     print (path)
     return send_from_directory('static', path)
-
 
 @app.route("/")
 def mnf():
@@ -96,6 +159,16 @@ def hello_q(dbs, query, langs):
     p.start()
     return ticket
 
+@app.route("/start_query/<dbs>/<query>/")
+def hello_qc(dbs, query):
+
+    langs = ''
+    ticket = unique_id()
+    p = Process(target=query_process, args=(dbs,query, langs, ticket))
+    p.start()
+    return ticket
+
+
 @app.route("/query_info/<ticket>")
 def qinf(ticket):
     try:
@@ -123,7 +196,10 @@ def get_res_count(ticket):
 
 @app.route("/is_query_finished/<ticket>")
 def gxet_res_count(ticket):
-    return ticket
+    if os.path.exists('res/'+ticket+'.done'):
+        return jsonify(True)
+    else:
+        return jsonify(False)
 
 @app.route("/get_result_langs/<ticket>")
 def get_langs(ticket):
@@ -206,6 +282,23 @@ def get_trees(ticket, lang, start, end):
 
     return ret
 
+@app.route("/get_err/<ticket>")
+def get_err(ticket):
+
+    trees = []
+
+    tc = 0
+    curr_tree = []
+    inf = open('./res/'+ticket+'.err','rt')
+    err = inf.read()
+    inf.close()
+
+    #Syntax error at the token 'ccc' HERE: 'ccc '...
+
+    to_return = ''
+    if "Syntax error" in err:
+        to_return = err.split('redone_expr.ExpressionError:')[1].split('During')[0]
+    return to_return
 
 @app.route("/tget_trees/<ticket>/<lang>/<int:start>/<int:end>")
 def tget_trees(ticket, lang, start, end):
