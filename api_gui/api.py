@@ -298,7 +298,7 @@ def get_err(ticket):
     to_return = ''
     if "Syntax error" in err:
         to_return = err.split('redone_expr.ExpressionError:')[1].split('During')[0]
-    return to_return
+    return err
 
 @app.route("/tget_trees/<ticket>/<lang>/<int:start>/<int:end>")
 def tget_trees(ticket, lang, start, end):
