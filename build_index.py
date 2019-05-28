@@ -158,7 +158,7 @@ if __name__=="__main__":
     db.open()
     solr_idx=filter_db.IDX(args)
 
-    set_id_db = blob_db.DB(args.dir)
+    set_id_db = blob_db.DB(args.dir, cache=True)
     set_id_db.open(foldername='/set_id_db/')
 
         
