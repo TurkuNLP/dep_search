@@ -367,6 +367,167 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
     #print ('cn', counter)
     return counter
 
+def query_from_db_api(q_obj, args, db, fdb, set_id_db):
+
+    #init the dbs
+    q_obj.set_db(set_id_db)
+
+    #This is a first try and an example without filter db
+    idx = 1
+    counter = 0
+    max_hits = args.max
+
+    end_cnt = 0 
+
+    curr_tree = []
+
+    outf_name = glob.glob('./api_gui/res/' + args.ticket + '*.conllu')
+    outf_name.sort()
+    if len(outf_name) < 1:
+        tree_cnt = 0
+    else:
+        tree_cnt = int(outf_name[-1].split('_')[-1].split('.')[0])
+
+    outf = open('./api_gui/res/' + args.ticket + '_' + str(tree_cnt) + '.conllu', 'w')
+
+    langs = set()
+
+    q = fdb.tree_id_queue 
+    #import pdb;pdb.set_trace()
+    while True:
+        try:
+            #print ('???')
+            idx = q.get()
+            #print (idx)
+            #continue
+
+            #print ('xxx', idx)
+            if idx == -1:
+                end_cnt += 1
+                #print (fdb.is_finished())
+                #print (fdb.finished)
+                #print (fdb.started)
+                #print (fdb.processes)
+                #print ('!!!', end_cnt, len(args.langs.split(',')))
+                if end_cnt == len(args.langs.split(',')):
+                    break
+                continue
+
+            res_set = q_obj.check_tree_id(idx, db)
+            #idx += 1
+            #print (idx)
+            #print (res_set)
+            #import pdb;pdb.set_trace()
+
+            if len(res_set) > 0:
+                #tree
+                #import pdb;pdb.set_trace()
+                hit = q_obj.get_tree_text()
+                tree_comms = q_obj.get_tree_comms()
+                tree_lines=hit.split("\n")
+
+                if counter >= max_hits and max_hits > 0:
+                    break
+                its_a_hit = False
+
+                #try:
+                curr_tree.append('# lang:\t'+ fdb.get_lang(idx))
+                if fdb.get_lang(idx) not in langs:
+                    langs.add(fdb.get_lang(idx))
+                    xx = open('./api_gui/res/' + args.ticket + '.langs', 'w')
+                    xx.write(json.dumps(list(langs)))
+                    xx.close()                
+
+                #except:
+                #    pass
+                for r in res_set:
+                    curr_tree.append("# db_tree_id:\t" + str(idx))
+                    curr_tree.append("# visual-style\t" + str(r + 1) + "\tbgColor:lightgreen")
+                    try:
+                        curr_tree.append("# hittoken:\t"+tree_lines[r])
+                        its_a_hit = True
+                    except:
+                        pass
+
+                if its_a_hit:
+
+                    if args.context>0:
+                        hit_url=get_url(tree_comms)
+                        texts=[]
+                        # get +/- context sentences from db
+                        for i in range(idx-args.context,idx+args.context+1):
+                            if i==idx:
+                                data=hit
+                            else:
+                                err = db.xset_tree_to_id(i)
+                                if err != 0: continue
+                                data = db.get_tree_text()
+                                data_comment = db.get_tree_comms()
+
+                                if data is None or get_url(data_comment)!=hit_url:
+                                    continue
+                            text=u" ".join(t.split(u"\t",2)[1] for t in data.split(u"\n"))
+                            if i<idx:
+                                texts.append(u"# context-before: "+text)
+                            elif i==idx:
+                                texts.append(u"# context-hit: "+text)
+                            else:
+                                texts.append(u"# context-after: "+text)
+                        curr_tree.append(u"\n".join(text for text in texts)).encode(u"utf-8")
+
+                    curr_tree.append(tree_comms)
+                    curr_tree.append(hit)
+
+                    outf.write('\n'.join(curr_tree) + '\n\n')
+                    tree_cnt += 1
+                    if tree_cnt%10==0:
+                        outf.close()
+                        outf = open('./api_gui/res/' + args.ticket + '_' + str(tree_cnt)+'.conllu', 'w')
+                        #tree_cnt = 0
+
+                    curr_tree = []
+                    counter += 1
+
+                #import pdb;pdb.set_trace(
+        except:
+            import traceback
+            traceback.print_exc()
+            pass
+            if idx > 0: break
+    #import pdb;pdb.set_trace()
+    outf.close()
+    fdb.kill_threads()
+    #print ('cn', counter)
+    outf = open('res/'+args.ticket+'.done','w')
+    outf.close()
+
+    return counter
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     #import pdb; pdb.set_trace()
     # init all necessary dbs
     
@@ -400,7 +561,7 @@ def main(argv):
     parser.add_argument('--extra-solr-term',default=[],action="append",help="Extra restrictions on Solr, strings passed verbatim in the Solr query, you can have several of these")
     parser.add_argument('--extra-solr-params',default="",help="Extra parameters on Solr - a dictionary passed verbatim in the Solr request")
     parser.add_argument('--langs',default="",help="List of language codes to be queried")
-
+    parser.add_argument('--ticket',default="",help="For API use")
 
     args = parser.parse_args(argv[1:])
 
@@ -514,7 +675,11 @@ def main_db_query(args):
     else:
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
 
-    total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db)
+    if len(args.ticket) > 1:
+        total_hits+=query_from_db_api(query_obj, args, db, fdb, set_id_db)
+    else:
+        total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db)
+
     print ("Total number of hits:",total_hits,file=sys.stderr)
 
     if not args.keep_query:

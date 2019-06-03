@@ -10,6 +10,9 @@ from multiprocessing import Process
 import subprocess
 import argparse
 from flask import Response
+import io
+import sys
+import glob
 
 app = Flask(__name__)
 
@@ -22,7 +25,6 @@ def query_process(dbs, query, langs, ticket):
 
     #Replace with call
     #open res file
-    outf = open('res/'+ticket,'w')
     outf_err = open('res/'+ticket+'.err','w')
 
 
@@ -33,57 +35,25 @@ def query_process(dbs, query, langs, ticket):
 
 
     if len(langs) > 0:
-        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--langs', langs, query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    else:
-        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--langs', langs, '--ticket', ticket, query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
 
+    else:
+        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit) , '--ticket', ticket ,query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr)
 
     xoutf = open('./res/' + ticket + '.json','wt')
     xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket}))
     xoutf.close()
 
-    '''
     for l, err in p.communicate():
         #write to res file
         try:
-            outf.write(l.decode('utf8'))
-            outf.flush()
-
             outf_err.write(err.decode('utf8'))
             outf_err.flush()
         except:
             pass
-        #flush!!
-    #print (cmd)
+
     outf.close()
-    '''
-
-    for l in p.stdout:
-        #write to res file
-        try:
-            outf.write(l.decode('utf8'))
-            outf.flush()
-        except:
-            pass
-
-    for l in p.stderr:
-        #write to res file
-        try:
-            outf_err.write(l.decode('utf8'))
-            outf_err.flush()
-        except:
-            pass
-
-
-        #flush!!
-    #print (cmd)
-    outf.close()
-
-
-
-    #mark its done!
-    outf = open('res/'+ticket+'.done','w')
-    outf.close()
+    outf_err.close()
 
 
 @app.route('/do_query/<dbs>/<query>/<m>/<langs>/')
@@ -185,10 +155,16 @@ def kill_q(ticket):
 
 @app.route("/get_result_count/<ticket>")
 def get_res_count(ticket):
-    inf = open('./res/' + ticket,'rt')
+
+    res = 0
+    files = glob.glob('./res/' + ticket + '*.conllu')
+    files.sort()
+    if len(files) > 0:
+        res = int(files[-1].split('_')[-1].split('.')[0])
+
+    inf = open(files[-1],'rt')
     stuff = inf.readlines()
     inf.close()
-    res = 0
     for l in stuff:
         if '# hittoken:' in l:
             res += 1
@@ -206,15 +182,9 @@ def get_langs(ticket):
 
     langs = set()
 
-    curr_tree = []
-    inf = open('./res/' + ticket,'rt')
-    for l in inf:
-        curr_tree.append(l)
-        if l == '\n':
-            for c in curr_tree:
-                if c.startswith('# lang: '):
-                    langs.add(c.split(':')[1].strip())
-            curr_tree = []
+    xx = open('./res/' + ticket + '.langs', 'r')
+    langs = json.load(xx)
+    xx.close()
 
     return jsonify(list(langs))
 
@@ -243,6 +213,7 @@ def get_xtrees(ticket, lang, start, end):
 
     tc = 0
     curr_tree = []
+    '''
     inf = open('./res/' + ticket,'rt')
     for l in inf:
         curr_tree.append(l)
@@ -252,12 +223,14 @@ def get_xtrees(ticket, lang, start, end):
                 if c.startswith('# lang: ' + lang):
                     if tc <= end and tc >= start:
                         trees.append(''.join(curr_tree[:]))
+                    if tc > end:
+                        break
                     tc += 1
             curr_tree = []
-            
+    '''        
     return render_template('query.html', start=start, end=end, lang=lang, idx=ticket)
 
-
+'''
 @app.route("/get_trees/<ticket>/<lang>/<int:start>/<int:end>")
 def get_trees(ticket, lang, start, end):
 
@@ -274,6 +247,8 @@ def get_trees(ticket, lang, start, end):
                 if c.startswith('# lang: ' + lang) or (c.startswith('# lang: ') and lang in c):
                     if tc <= end and tc >= start:
                         trees.append(''.join(curr_tree[:]))
+                    if tc > end:
+                        break
                     tc += 1
             curr_tree = []
 
@@ -281,6 +256,51 @@ def get_trees(ticket, lang, start, end):
     ret = flask.render_template(u"result_tbl.html",trees=yield_trees(src))
 
     return ret
+'''
+
+
+@app.route("/get_trees/<ticket>/<lang>/<int:start>/<int:end>")
+def get_trees(ticket, lang, start, end):
+
+    trees = []
+
+    tc = 0
+    curr_tree = []
+    its_on = False
+
+    #lets find a starting point
+    files = glob.glob('./res/' + ticket + '*.conllu')
+    files.sort()
+    prev = ''
+    filelist = []
+    for f in files:
+        #print (int(f.split('_')[-1].split('.')[0]), start, end, (int(f.split('_')[-1].split('.')[0]) >= int(start)) and (int(f.split('_')[-1].split('.')[0]) <= int(end)))
+        if (int(f.split('_')[-1].split('.')[0]) >= int(start)) and (int(f.split('_')[-1].split('.')[0]) < int(end)):
+            filelist.append(f)
+
+    for f in filelist:
+        inf = open(f,'rt')
+        '''
+        for l in inf:
+            curr_tree.append(l)
+            if l == '\n':
+                for c in curr_tree:
+                    if c.startswith('# lang: ' + lang) or (c.startswith('# lang: ') and lang in c):
+                        #if tc > start_tree - start:
+                        trees.append(''.join(curr_tree[:]))
+                        #if tc > start-end:
+                        #    break
+                        tc += 1
+                curr_tree = []
+        '''
+        trees.extend(inf.readlines())
+        inf.close()
+
+    src = ''.join(trees).split('\n')
+    ret = flask.render_template(u"result_tbl.html",trees=yield_trees(src))
+
+    return ret
+
 
 @app.route("/get_err/<ticket>")
 def get_err(ticket):
