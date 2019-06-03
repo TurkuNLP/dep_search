@@ -498,7 +498,7 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
     outf.close()
     fdb.kill_threads()
     #print ('cn', counter)
-    outf = open('res/'+args.ticket+'.done','w')
+    outf = open('./api_gui/res/'+args.ticket+'.done','w')
     outf.close()
 
     return counter
