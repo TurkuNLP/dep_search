@@ -6,7 +6,7 @@
 
 
 
-<input id="qrt" type="textarea" name="vehicle1" value="_"><br>
+<input id="qrt" type="textarea" name="vehicle1" value="_ <nsubj _"><br>
 
   <input id="sbtn" type="button" value="Submit">
 
@@ -31,7 +31,7 @@ function prependChild(parentEle, newFirstChildEle) {
 
 $( document ).ready(function() { 
 
-        $.getJSON("/get_dbs", function(data, status){
+        $.getJSON("./get_dbs/", function(data, status){
         //alert(data)
         var arrayLength = data.length;
         for (var i = 0; i < arrayLength; i++) {
@@ -60,7 +60,7 @@ $( document ).ready(function() {
         for (var item in xx){
             
             console.log(xx[item]);
-            $.getJSON('/get_langs/' + xx[item], function (data, status){
+            $.getJSON('./get_langs/' + xx[item], function (data, status){
 
             console.log(data);
             //append to langs
@@ -120,20 +120,20 @@ $( document ).ready(function() {
 
 
         //launch
-        $.get('/start_query/'+db_str+'/'+ query + '/' + lang_str, function(data, status){
+        $.get('./start_query/'+db_str+'/'+ query + '/' + lang_str, function(data, status){
             //"/show/<ticket>/<lang>/<int:start>/<int:end>"
             //document.body.append('<a href="/show/' + data + '/' + langs[0] + '/0/10' + '">' + query + '</a>');
             //console.log(data);
             var a = document.createElement('a');
             var linkText = document.createTextNode(query + '  ' + lang_str + '  ' + db_str);
             a.appendChild(linkText);
-            a.href = '/show/' + data + '/' + langs[0] + '/0/10';
+            a.href = './show/' + data + '/' + langs[0] + '/0/10';
             document.body.appendChild(a);
             //$('#langs').insertAdjacentElement('afterend', a)
             var a = document.createElement('br');
             document.body.appendChild(a);
             //$('#langs').insertAdjacentElement('afterend', a)
-            window.open('/show/' + data + '/' + langs[0] + '/0/10', '_blank');
+            window.open('./show/' + data + '/' + langs[0] + '/0/10', '_blank');
 
         });
 
