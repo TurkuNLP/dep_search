@@ -381,16 +381,26 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
 
     curr_tree = []
 
-    outf_name = glob.glob('./api_gui/res/' + args.ticket + '*.conllu')
-    outf_name.sort()
-    if len(outf_name) < 1:
-        tree_cnt = 0
-    else:
-        tree_cnt = int(outf_name[-1].split('_')[-1].split('.')[0])
-
-    outf = open('./api_gui/res/' + args.ticket + '_' + str(tree_cnt) + '.conllu', 'w')
+    outf_name = glob.glob('./api_gui/res/*_' + args.ticket + '*.conllu')
 
     langs = set()
+    for f in outf_name:
+        langs.add(f.split('/')[-1].split('_')[0])
+
+    outf_files = {}
+    tree_counts = {}
+
+    for l in list(langs):
+
+        lf = glob.glob('./api_gui/res/' + l + '_' + args.ticket + '*.conllu')
+        lf.sort()
+        try:
+            latest_idx = int(lf[-1].split('_')[-1].split('.')[0])
+        except:
+            latest_idx = 0
+
+        outf_files[l] = open('./api_gui/res/' + l + '_' + args.ticket + '_' + str(latest_idx) + '.conllu', 'wt')
+        tree_counts[l] = latest_idx
 
     q = fdb.tree_id_queue 
     #import pdb;pdb.set_trace()
@@ -419,7 +429,9 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
             #print (res_set)
             #import pdb;pdb.set_trace()
 
+            curr_tree = []
             if len(res_set) > 0:
+
                 #tree
                 #import pdb;pdb.set_trace()
                 hit = q_obj.get_tree_text()
@@ -432,11 +444,16 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
 
                 #try:
                 curr_tree.append('# lang:\t'+ fdb.get_lang(idx))
+                curr_lang = fdb.get_lang(idx)
+
                 if fdb.get_lang(idx) not in langs:
                     langs.add(fdb.get_lang(idx))
                     xx = open('./api_gui/res/' + args.ticket + '.langs', 'w')
                     xx.write(json.dumps(list(langs)))
                     xx.close()                
+                    outf_files[curr_lang] = open('./api_gui/res/' + curr_lang + '_' + args.ticket + '_' + str(0) + '.conllu', 'wt')
+                    tree_counts[curr_lang] = 0
+
 
                 #except:
                 #    pass
@@ -478,11 +495,11 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
                     curr_tree.append(tree_comms)
                     curr_tree.append(hit)
 
-                    outf.write('\n'.join(curr_tree) + '\n\n')
-                    tree_cnt += 1
-                    if tree_cnt%10==0:
-                        outf.close()
-                        outf = open('./api_gui/res/' + args.ticket + '_' + str(tree_cnt)+'.conllu', 'w')
+                    outf_files[curr_lang].write('\n'.join(curr_tree) + '\n\n')
+                    tree_counts[curr_lang] += 1
+                    if tree_counts[curr_lang]%10==0:
+                        outf_files[curr_lang].close()
+                        outf_files[curr_lang] = open('./api_gui/res/' + curr_lang + '_' + args.ticket + '_' + str(tree_counts[curr_lang])+'.conllu', 'w')
                         #tree_cnt = 0
 
                     curr_tree = []
@@ -495,7 +512,8 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
             pass
             if idx > 0: break
     #import pdb;pdb.set_trace()
-    outf.close()
+    for f,k in outf_files.items():
+        k.close()
     fdb.kill_threads()
     #print ('cn', counter)
     outf = open('./api_gui/res/'+args.ticket+'.done','w')

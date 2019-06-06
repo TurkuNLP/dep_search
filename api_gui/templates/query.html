@@ -14,24 +14,24 @@
      </script>
  
      <!-- Bootstrap core CSS -->
-     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-     <link href="/static/css/jquery-ui.css" rel="stylesheet">
-     <link href="/static/css/turkunlp.css" rel="stylesheet">
+     <link href="http://epsilon-it.utu.fi/ds_demo/static//css/bootstrap.min.css" rel="stylesheet">
+     <link href="http://epsilon-it.utu.fi/ds_demo/static//css/jquery-ui.css" rel="stylesheet">
+     <link href="http://epsilon-it.utu.fi/ds_demo/static//css/turkunlp.css" rel="stylesheet">
 
      <!-- Custom styles for this template -->
-     <script src="/static/js/jquery.min.js"> </script>
-     <script src="/static/js/bootstrap.min.js"> </script>
-     <script src="/static/js/he.js"></script>
-     <script src="/static/js/jquery-ui.js"></script>
+     <script src="http://epsilon-it.utu.fi/ds_demo/static//js/jquery.min.js"> </script>
+     <script src="http://epsilon-it.utu.fi/ds_demo/static//js/bootstrap.min.js"> </script>
+     <script src="http://epsilon-it.utu.fi/ds_demo/static//js/he.js"></script>
+     <script src="http://epsilon-it.utu.fi/ds_demo/static//js/jquery-ui.js"></script>
 
 
      
 	<!-- annotation visualization stuff --> 
-	<!-- <link rel="stylesheet" href="/static/css/jquery-ui-redmond.css"/> -->
-	<link rel="stylesheet" href="/static/css/annodoc-main.css"/>
-	<link rel="stylesheet" href="/static/css/style-vis.css"/>
+	<!-- <link rel="stylesheet" href=http://epsilon-it.utu.fi/ds_demo/static//css/jquery-ui-redmond.css"/> -->
+	<link rel="stylesheet" href="http://epsilon-it.utu.fi/ds_demo/static//css/annodoc-main.css"/>
+	<link rel="stylesheet" href="http://epsilon-it.utu.fi/ds_demo/static//css/style-vis.css"/>
 	<!-- <link rel="stylesheet" href="http://bionlp-www.utu.fi//css/depsearch.css"> -->
-	<script type="text/javascript" src="/static/js/head.min.js"></script>
+	<script type="text/javascript" src="http://epsilon-it.utu.fi/ds_demo/static//js/head.min.js"></script>
 	<!-- end annotation visualization stuff -->
 
 
@@ -41,7 +41,7 @@
 
 <!-- annotation visualization stuff --> 
 <script type="text/javascript">
-    var root = "/static/";
+    var root = "http://epsilon-it.utu.fi/ds_demo/static//";
     head.js(
         // External libraries
         root + 'js/jquery.min.js',
@@ -96,6 +96,11 @@
 </div>
 <div id="err">
 </div>
+
+<div id="res_count">
+</div>
+
+
 </div>
 
 
@@ -114,14 +119,60 @@
 
 <p>&nbsp;</p>
 <script>
+
+
+var xpagelen = "";
+var start = {{ start }};
+var end = {{ end }};
+var lang = "{{ lang }}";
+var idx = "{{ idx }}";
+var langs = []
+var done = false;
+var page_tree_count = 0;
+
+
+
+
+function updatetrees(idx, start, end, lang){
+
+    var target = document.getElementById( "query_result" );
+
+    //$.get("/get_trees/2016642315595390675/b'pl'/1/25", function(data, status){
+
+
+    $.get("/ds_demo/get_page_tree_count/" + idx + "/" + lang + "/" + start + "/" + end, function(data, status){
+
+        console.log('XXX');
+        console.log(data, page_tree_count);
+        if (data > page_tree_count){
+ 
+            console.log("ebin");
+            page_tree_count = data;
+            loadtrees(idx, start, end, lang);
+        }
+
+
+    });
+
+
+
+
+
+
+}
+
+
+
+
+
+
 function loadtrees(idx, start, end, lang){
 
     var target = document.getElementById( "query_result" );
 
     //$.get("/get_trees/2016642315595390675/b'pl'/1/25", function(data, status){
 
-    $.get("/get_trees/" + idx + "/" + lang + "/" + start + "/" + end, function(data, status){
-       //alert("Data: " + data + "\nStatus: " + status);
+    $.get("/ds_demo/get_trees/" + idx + "/" + lang + "/" + start + "/" + end, function(data, status){
        $('#query_result').html(data);
 
        $('.conllu').each(function() {
@@ -138,18 +189,82 @@ function loadtrees(idx, start, end, lang){
 
 
 
-var xpagelen = "";
-var start = {{ start }};
-var end = {{ end }};
-var lang = "{{ lang }}";
-var idx = "{{ idx }}";
-var langs = []
+
+function update_stuff(){
+
+
+   if (done == false){
+
+     updatetrees(idx, start, end, lang);
+
+
+    $.get("/ds_demo/is_query_finished/" + idx, function(xdata, status){
+        if (xdata){
+        done = true;
+        infoxx = "Query has finished!";
+        $('#qff').html("");
+        var text = document.createTextNode(infoxx);
+        $('#qff').append(text);
+        }
+
+    }); 
+
+    $.get("/ds_demo/get_result_count/" + idx, function(data, status){
+       
+       $('#res_count').html("");
+       for(var key in data) {
+           var value = data[key];
+           console.log(data);
+           var text = document.createTextNode(key + "   " + value + "+    ");
+           $('#res_count').append(text);
+       }
+    }); 
+
+
+    //langs in q
+    $.get("/ds_demo/get_result_langs/" + idx, function(data, status){
+        //
+        var arrayLength = data.length;
+        for (var i = 0; i < arrayLength; i++) {
+            var xx = data[i];
+            //langs.push(xx);
+            //alert(data[i]);
+            //Add button
+
+            if (!langs.includes(xx)){
+
+                langs.push(xx);
+
+                var button = document.createElement("button");
+                button.setAttribute("id", "lang_btn_" + xx);
+                button.setAttribute("lang", xx);
+                button.setAttribute("onclick", "xmove(this);");
+                button.innerHTML = data[i];
+
+                var body = document.getElementById("queryinfo");
+                body.appendChild(button);
+            }
+            //alert(body);
+
+            //Add link
+         
+        }
+
+    });
+
+
+
+
+
+    }
+}
+
 
 
 function xmove(xx){
 
     console.log(xx["lang"]);
-    window.location.href = "/show/" + idx + "/" + xx["lang"] + "/0/" + xpagelen;
+    window.location.href = "/ds_demo/show/" + idx + "/" + xx["lang"] + "/0/" + xpagelen;
 
 
 }
@@ -159,7 +274,10 @@ function xmove(xx){
 $( document ).ready(function() {
 
     //load results
-    loadtrees(idx, start, end, lang);
+    updatetrees(idx, start, end, lang);
+
+
+
 
     //page number
     var pagelen = end - start
@@ -168,25 +286,25 @@ $( document ).ready(function() {
     $('#pgnum').val(pagenum);
     
     //page count
-    $.get("/get_result_count/" + idx, function(data, status){
-       $('#pages').html(Math.round(data/pagelen + 1));
+    $.get("/ds_demo/get_result_count/" + idx, function(data, status){
+       $('#pages').html(Math.round(data[lang]/pagelen + 1));
     });
 
     //page buttons
     $('#fwbtn').click(function() {
-        window.location.href = "/show/" + idx + "/" + lang + "/" + (start + pagelen) + "/" + (end + pagelen);
+        window.location.href = "/ds_demo/show/" + idx + "/" + lang + "/" + (start + pagelen) + "/" + (end + pagelen);
     });
 
     $('#bbtn').click(function() {
-        window.location.href = "/show/" + idx + "/" + lang + "/" + (start - pagelen) + "/" + (end - pagelen);
+        window.location.href = "/ds_demo/show/" + idx + "/" + lang + "/" + (start - pagelen) + "/" + (end - pagelen);
     });
 
     $('#gobtn').click(function() {
-        window.location.href = "/show/" + idx + "/" + lang + "/" + (parseInt($('#pgnum').val()) * pagelen) + "/" + ((parseInt($('#pgnum').val()) * pagelen) + pagelen);
+        window.location.href = "/ds_demo/show/" + idx + "/" + lang + "/" + (parseInt($('#pgnum').val()) * pagelen) + "/" + ((parseInt($('#pgnum').val()) * pagelen) + pagelen);
     });
 
     //langs in q
-    $.get("/get_result_langs/" + idx, function(data, status){
+    $.get("/ds_demo/get_result_langs/" + idx, function(data, status){
         //
         var arrayLength = data.length;
         for (var i = 0; i < arrayLength; i++) {
@@ -234,14 +352,14 @@ $( document ).ready(function() {
 
     //$('#pages').html(Math.round(data/pagelen + 1));
 
-    $.get("/query_info/" + idx, function(xdata, status){
+    $.get("/ds_demo/query_info/" + idx, function(xdata, status){
         console.log(xdata);
         var text = document.createTextNode(xdata);
         //alert(xdata);
         $('#queryjs').append(text);
     }); 
 
-    $.get("/is_query_finished/" + idx, function(xdata, status){
+    $.get("/ds_demo/is_query_finished/" + idx, function(xdata, status){
         console.log(xdata);
         var infoxx = "Query is still running ...";
         if (xdata){
@@ -251,7 +369,7 @@ $( document ).ready(function() {
         //alert(xdata);
         $('#qff').append(text);
     }); 
-    $.get("/get_err/" + idx, function(xdata, status){
+    $.get("/ds_demo/get_err/" + idx, function(xdata, status){
         console.log(xdata);
         var text = document.createTextNode(xdata);
         //alert(xdata);
@@ -259,6 +377,7 @@ $( document ).ready(function() {
     }); 
 
 
+     setInterval(update_stuff, 3000);
 
 
     //lang "tabs"

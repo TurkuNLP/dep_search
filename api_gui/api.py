@@ -13,6 +13,8 @@ from flask import Response
 import io
 import sys
 import glob
+from flask import jsonify
+
 
 app = Flask(__name__)
 
@@ -31,7 +33,9 @@ def query_process(dbs, query, langs, ticket):
     #query_py = 'cd ..;python3 query.py'
     #cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
     #os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
-    limit = 5000
+    limit = 10000
+
+    os.system('python3 res_cleaner.py')
 
 
     if len(langs) > 0:
@@ -44,6 +48,7 @@ def query_process(dbs, query, langs, ticket):
     xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket}))
     xoutf.close()
 
+    '''
     for l, err in p.communicate():
         #write to res file
         try:
@@ -54,7 +59,7 @@ def query_process(dbs, query, langs, ticket):
 
     outf.close()
     outf_err.close()
-
+    '''
 
 @app.route('/do_query/<dbs>/<query>/<m>/<langs>/')
 def xxquery_process(dbs, query, m, langs):
@@ -93,16 +98,17 @@ def mnf():
     return render_template("qx.html")
 
 
-@app.route("/get_dbs")
+@app.route("/get_dbs/")
 def gdb():
     inf = open('dbs.json','rt')
     dbs = json.load(inf)
     inf.close()
     xx = []
-    print (dbs)
+    print ('DB', dbs)
     for k in dbs:
         xx.append(k)
-    return jsonify(xx)
+    print (json.dumps(xx))
+    return json.dumps(xx)
 
 @app.route("/get_langs/<db>")
 def dbl(db):
@@ -156,6 +162,24 @@ def kill_q(ticket):
 @app.route("/get_result_count/<ticket>")
 def get_res_count(ticket):
 
+
+    #fi_2304882037610770081_167740.conllu
+
+    files = glob.glob('./res/*' + ticket + '*.conllu')
+
+    res = {}
+    for f in files:
+        lang = f.split('/')[-1].split('_')[0]
+        number = int(f.split('/')[-1].split('_')[-1].split('.')[0])
+        if lang not in res.keys():
+            res[lang] = 0
+        if number > res[lang]:
+            res[lang] = number
+
+    return jsonify(res)
+
+
+    '''
     res = 0
     files = glob.glob('./res/' + ticket + '*.conllu')
     files.sort()
@@ -168,7 +192,8 @@ def get_res_count(ticket):
     for l in stuff:
         if '# hittoken:' in l:
             res += 1
-    return jsonify(res)
+    return json.dumps(res)
+    '''
 
 @app.route("/is_query_finished/<ticket>")
 def gxet_res_count(ticket):
@@ -203,7 +228,7 @@ def get_tree_count(ticket, lang):
                     trees += 1
             curr_tree = []
 
-    return jsonify(trees)
+    return json.dumps(trees)
 
 
 @app.route("/show/<ticket>/<lang>/<int:start>/<int:end>")
@@ -227,7 +252,30 @@ def get_xtrees(ticket, lang, start, end):
                         break
                     tc += 1
             curr_tree = []
-    '''        
+    '''      
+    if lang == 'undefined':
+        #
+        inf = open('res/'+ticket+'.json', 'r')
+        db = json.load(inf)
+        print (db)
+        db = db["dbs"].split(',')[0]
+        inf.close()
+
+        inf = open('dbs.json','rt')
+        dbs = json.load(inf)
+        inf.close()
+
+        inf = open(dbs[db] + '/langs', 'rt')
+
+        xx = []
+        for ln in inf:
+            xx.append(ln.strip())
+
+        inf.close()
+        return render_template('query.html', start=start, end=end, lang=xx[0], idx=ticket)
+
+
+  
     return render_template('query.html', start=start, end=end, lang=lang, idx=ticket)
 
 '''
@@ -269,7 +317,7 @@ def get_trees(ticket, lang, start, end):
     its_on = False
 
     #lets find a starting point
-    files = glob.glob('./res/' + ticket + '*.conllu')
+    files = glob.glob('./res/' + lang + '_' + ticket + '*.conllu')
     files.sort()
     prev = ''
     filelist = []
@@ -300,6 +348,49 @@ def get_trees(ticket, lang, start, end):
     ret = flask.render_template(u"result_tbl.html",trees=yield_trees(src))
 
     return ret
+
+@app.route("/get_page_tree_count/<ticket>/<lang>/<int:start>/<int:end>")
+def get_page_tree_count(ticket, lang, start, end):
+
+    trees = []
+
+    tc = 0
+    curr_tree = []
+    its_on = False
+
+    #lets find a starting point
+    files = glob.glob('./res/' + lang + '_' + ticket + '*.conllu')
+    files.sort()
+    prev = ''
+    filelist = []
+    for f in files:
+        #print (int(f.split('_')[-1].split('.')[0]), start, end, (int(f.split('_')[-1].split('.')[0]) >= int(start)) and (int(f.split('_')[-1].split('.')[0]) <= int(end)))
+        if (int(f.split('_')[-1].split('.')[0]) >= int(start)) and (int(f.split('_')[-1].split('.')[0]) < int(end)):
+            filelist.append(f)
+
+    for f in filelist:
+        inf = open(f,'rt')
+        '''
+        for l in inf:
+            curr_tree.append(l)
+            if l == '\n':
+                for c in curr_tree:
+                    if c.startswith('# lang: ' + lang) or (c.startswith('# lang: ') and lang in c):
+                        #if tc > start_tree - start:
+                        trees.append(''.join(curr_tree[:]))
+                        #if tc > start-end:
+                        #    break
+                        tc += 1
+                curr_tree = []
+        '''
+        trees.extend(inf.readlines())
+        inf.close()
+
+    count = 0
+    for l in trees:
+        if l.startswith('# hittoken:'): count += 1
+
+    return jsonify(count)
 
 
 @app.route("/get_err/<ticket>")
@@ -339,7 +430,7 @@ def tget_trees(ticket, lang, start, end):
                     tc += 1
             curr_tree = []
             
-    return jsonify(''.join(trees))
+    return json.dumps(''.join(trees))
 
 
 def yield_trees(src):
