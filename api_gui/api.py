@@ -1,3 +1,4 @@
+from flask import stream_with_context, Response
 import json
 from flask import Flask, jsonify, Markup
 import os
@@ -14,12 +15,36 @@ import io
 import sys
 import glob
 from flask import jsonify
+import os.path
+
+
 
 
 app = Flask(__name__)
 
 
-def query_process(dbs, query, langs, ticket):
+def query_process(dbs, query, langs, ticket, limit=10000, case=False):
+
+
+
+    limit = int(limit)
+    try:
+
+
+        inf = open('config.json','r')
+        xx = json.load(inf)
+        inf.close()
+
+        allow_unlimited_limit = xx['allow_unlimited_limit']
+        max_result_limit = xx['max_result_limit']
+
+        if limit==0 and not allow_unlimited_limit:
+            limit = max_result_limit 
+
+        if limit > max_result_limit:
+            limit = max_result_limit
+    except:
+        pass
 
     inf = open('dbs.json','rt')
     xdbs = json.load(inf)
@@ -33,16 +58,27 @@ def query_process(dbs, query, langs, ticket):
     #query_py = 'cd ..;python3 query.py'
     #cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
     #os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
-    limit = 10000
 
     os.system('python3 res_cleaner.py')
 
+    print('db', dbs)
+
 
     if len(langs) > 0:
-        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--langs', langs, '--ticket', ticket, query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
-
+        if case:
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+        else:
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
     else:
-        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit) , '--ticket', ticket ,query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr)
+        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit) , '--context', '4', '--ticket', ticket ,query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr)
+
+        if case:
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+        else:
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+
+
+
 
     xoutf = open('./res/' + ticket + '.json','wt')
     xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket}))
@@ -84,6 +120,8 @@ def xxquery_process(dbs, query, m, langs):
 
     return Response(generate(), mimetype='text')
 
+
+
 #https://stackoverflow.com/questions/34344836/will-hashtime-time-always-be-unique
 def unique_id():
     return str(hash(time.time()))
@@ -124,25 +162,114 @@ def dbl(db):
         xx.append(ln.strip())
 
     inf.close()
+    xx.sort()
+
     print (xx)
     return jsonify(xx)
 
-@app.route("/start_query/<dbs>/<query>/<langs>")
-def hello_q(dbs, query, langs):
+
+def file_generator_lang(ticket, lang):
+
+    step = 10
+    c = 0
+    while True:
+        fname = './res/' + lang + '_' + ticket + '_' + str(c) + '.conllu'
+        if not os.path.isfile(fname):
+            break
+        inf = open(fname, 'r')
+        for l in inf:
+            yield l
+        inf.close()
+        c += step
+        
+
+def file_generator(ticket):
+
+    files = glob.glob('./res/*'+ticket+'.conllu')
+    files.sort()
+
+    sent_files = set()
+    while True:
+
+        #
+        for f in files:
+            inf = open(f,'r')
+            for l in inf:
+                yield l
+            inf.close()
+            sent_files.add(f)
+
+        #
+        xfiles = set(glob.glob('./res/*'+ticket+'.conllu'))
+        xx = xfiles - sent_files
+        if len(xx) > 0:
+            #
+            files = list(xx)
+        else:
+            break
+
+
+@app.route("/download/<ticket>")
+def dl(ticket):
+
+    content_gen = file_generator(ticket)
+    response = Response(stream_with_context(content_gen))
+
+    response.headers['Content-Type'] = "application/octet-stream"
+    response.headers['Content-Disposition'] = "inline; filename=" + ticket + '.conllu'
+
+    return response
+
+
+@app.route("/download/<ticket>/<lang>")
+def dll(ticket, lang):
+
+    content_gen = file_generator_lang(ticket, lang)
+    response = Response(stream_with_context(content_gen))
+
+    response.headers['Content-Type'] = "application/octet-stream"
+    response.headers['Content-Disposition'] = "inline; filename=" + lang + '_' + ticket + '.conllu'
+
+    return response
+
+'''
+@app.route("/start_query/<dbs>/<query>/<langs>/<limit>")
+def hello_q(dbs, query, langs, limit):
+
+    print ("YYY")
+    #./start_query/pb/minä//10000/false
+
 
     ticket = unique_id()
-    p = Process(target=query_process, args=(dbs,query, langs, ticket))
+    p = Process(target=query_process, args=(dbs,query, langs, ticket, limit))
     p.start()
     return ticket
+'''
 
-@app.route("/start_query/<dbs>/<query>/")
-def hello_qc(dbs, query):
+@app.route("/start_query/<dbs>/<query>/<limit>/<case>")
+def hello_qc(dbs, query, limit, case):
 
+    print ('XXXX')
     langs = ''
+
+    case = case=='true'
     ticket = unique_id()
-    p = Process(target=query_process, args=(dbs,query, langs, ticket))
+    p = Process(target=query_process, args=(dbs,query, langs, ticket, limit, case))
     p.start()
     return ticket
+
+@app.route("/start_query/<dbs>/<query>/<langs>/<limit>/<case>")
+def hello_qcc(dbs, query, langs, limit, case):
+
+    case = case=='true'
+    print ('WBIN!')
+
+    ticket = unique_id()
+    p = Process(target=query_process, args=(dbs,query, langs, ticket, limit, case))
+    p.start()
+    return ticket
+
+
 
 
 @app.route("/query_info/<ticket>")
@@ -234,6 +361,14 @@ def get_tree_count(ticket, lang):
 @app.route("/show/<ticket>/<lang>/<int:start>/<int:end>")
 def get_xtrees(ticket, lang, start, end):
 
+
+    inf = open('config.json', 'r')
+    xx = json.load(inf)
+    inf.close()
+
+    approot = xx['approot']
+
+
     trees = []
 
     tc = 0
@@ -272,11 +407,11 @@ def get_xtrees(ticket, lang, start, end):
             xx.append(ln.strip())
 
         inf.close()
-        return render_template('query.html', start=start, end=end, lang=xx[0], idx=ticket)
+        return render_template('query.html', start=start, end=end, lang=xx[0], idx=ticket, approot=approot)
 
 
   
-    return render_template('query.html', start=start, end=end, lang=lang, idx=ticket)
+    return render_template('query.html', start=start, end=end, lang=lang, idx=ticket, approot=approot)
 
 '''
 @app.route("/get_trees/<ticket>/<lang>/<int:start>/<int:end>")
@@ -455,7 +590,7 @@ def yield_trees(src):
             yield u"\n".join(current_tree), current_comment
             current_comment=[]
             current_tree=[]
-current_context=u""
+            current_context=u""
 
 
 if __name__ == '__main__':

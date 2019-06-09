@@ -334,10 +334,9 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
                             if i==idx:
                                 data=hit
                             else:
-                                err = db.xset_tree_to_id(i)
-                                if err != 0: continue
-                                data = db.get_tree_text()
-                                data_comment = db.get_tree_comms()
+                                q_obj.set_tree_id(i, db)
+                                data = q_obj.get_tree_text()
+                                data_comment = q_obj.get_tree_comms()
 
                                 if data is None or get_url(data_comment)!=hit_url:
                                     continue
@@ -348,7 +347,10 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
                                 texts.append(u"# context-hit: "+text)
                             else:
                                 texts.append(u"# context-after: "+text)
-                        print (u"\n".join(text for text in texts)).encode(u"utf-8")
+                        try:
+                            print (u"\n".join(text for text in texts)).encode(u"utf-8")
+                        except:
+                            pass
 
                     print (tree_comms)
                     print (hit)
@@ -467,20 +469,20 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
                         pass
 
                 if its_a_hit:
-
+                    texts = []
                     if args.context>0:
                         hit_url=get_url(tree_comms)
                         texts=[]
                         # get +/- context sentences from db
                         for i in range(idx-args.context,idx+args.context+1):
+                            if i<0:continue
+
                             if i==idx:
                                 data=hit
                             else:
-                                err = db.xset_tree_to_id(i)
-                                if err != 0: continue
-                                data = db.get_tree_text()
-                                data_comment = db.get_tree_comms()
-
+                                q_obj.set_tree_id(i, db)
+                                data = q_obj.get_tree_text()
+                                data_comment = q_obj.get_tree_comms()
                                 if data is None or get_url(data_comment)!=hit_url:
                                     continue
                             text=u" ".join(t.split(u"\t",2)[1] for t in data.split(u"\n"))
@@ -490,7 +492,10 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
                                 texts.append(u"# context-hit: "+text)
                             else:
                                 texts.append(u"# context-after: "+text)
-                        curr_tree.append(u"\n".join(text for text in texts)).encode(u"utf-8")
+                        try:
+                            curr_tree.append(u"\n".join(text for text in texts)).encode(u"utf-8")
+                        except:
+                            pass
 
                     curr_tree.append(tree_comms)
                     curr_tree.append(hit)
