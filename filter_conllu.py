@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 from dep_search import *
 sys.path.append('./dep_search/')
 import time
@@ -246,16 +247,30 @@ def load(pyxFile):
     mod=importlib.import_module(pyxFile)
     return mod
 '''
+'''
+def load(pyxFile):
+    """Loads a search pyx file, returns the module"""
+    ###I need to hack around this, because this thing is messing stdout
+    #cythonize -a -i xxx.pyx
+    error=subprocess.call(["cythonize","-a","-i",pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
+    if error!=0:
+        sys.exit(1)
+    mod=importlib.import_module(pyxFile)
+    return mod
+'''
 
 def load(pyxFile):
     """Loads a search pyx file, returns the module"""
     ###I need to hack around this, because this thing is messing stdout
     #cythonize -a -i xxx.pyx
-    error=subprocess.call(["/home/mjluot/.local/bin/cythonize","-a","-i",pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
+    error=subprocess.call(["cythonize","-a","-i",'./dep_search/' + pyxFile+'.pyx'], stdout=sys.stderr, stderr=sys.stderr)
     if error!=0:
         sys.exit(1)
-    mod=importlib.import_module(pyxFile)
+    mod=importlib.import_module('dep_search.' + pyxFile)
     return mod
+
+
+
 
 def get_url(comments):
     for c in comments:
@@ -283,15 +298,15 @@ def query_from_db(q_obj, args, db, inp_f):
             # get next blob
             blob, form =s.serialize_from_conllu(sent,comments,db)
             # res_set = check blob
+            #print (sent)
             #print (blob)
-
+            if len(sent) < 2: continue
             # if end of stdin, just stop
-
+           
 
             res_set = q_obj.check_blob(blob)
-            print (res_set)
             idx += 1
-
+            
             if len(res_set) > 0:
                 #tree
                 #import pdb;pdb.set_trace()
@@ -349,6 +364,7 @@ def query_from_db(q_obj, args, db, inp_f):
             if idx > 0: break
     #import pdb;pdb.set_trace()
 
+    #print ('ebin')
     return counter
 
     #import pdb; pdb.set_trace()
@@ -521,7 +537,7 @@ def main(argv):
 
         temp_file_name = 'qry_' + m.hexdigest() + '.pyx'
         if not os.path.isfile(query_folder + temp_file_name):
-            f = open('qry_' + m.hexdigest() + '.pyx', 'wt')
+            f = open('./dep_search/qry_' + m.hexdigest() + '.pyx', 'wt')
             try:
                 pseudocode_ob.generate_and_write_search_code_from_expression(args.search, f, json_filename=json_filename, db=db, case=args.case)
             except Exception as e:
