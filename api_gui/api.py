@@ -81,7 +81,7 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
 
 
     xoutf = open('./res/' + ticket + '.json','wt')
-    xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket}))
+    xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket, 'limit': limit}))
     xoutf.close()
 
     '''
