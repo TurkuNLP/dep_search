@@ -248,7 +248,7 @@ class IDX(object):
         #import pdb;pdb.set_trace()
         #print (val)
         #idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
-        for v in val:
+        for v in set(val):
             self.txn.put((v + '_' + str(idx)).encode('utf8'), b'1')
             self.txn.commit()
             self.txn = self.env.begin(write=True)
@@ -271,7 +271,7 @@ class IDX(object):
         #import pdb;pdb.set_trace()
         #print (val)
         idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
-        for v in val:
+        for v in set(val):
             self.txn.put((v + '_' + str(idx)).encode('utf8'), b'1')
             self.txn.commit()
             self.txn = self.env.begin(write=True)

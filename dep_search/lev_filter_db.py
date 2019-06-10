@@ -304,7 +304,7 @@ class IDX(object):
         #import pdb;pdb.set_trace()
         #print (val)
         #idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
-        for v in val:
+        for v in set(val):
             self.db.put((v + '_' + str(idx)).encode('utf8'), b'1')
         
         #self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
@@ -319,7 +319,7 @@ class IDX(object):
         #import pdb;pdb.set_trace()
         #print (val)
         idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
-        for v in val:
+        for v in set(val):
             self.db.put((v + '_' + str(idx)).encode('utf8'), b'1')
         
         #self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
