@@ -17,8 +17,8 @@ import glob
 from flask import jsonify
 import os.path
 
-
-
+from kwic import kwic_gen
+from freqs import get_freqs 
 
 app = Flask(__name__)
 
@@ -59,7 +59,7 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
     #cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
     #os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
 
-    os.system('python3 res_cleaner.py')
+    os.system('python3 res_cleaner.py &')
 
     print('db', dbs)
 
@@ -231,6 +231,39 @@ def dll(ticket, lang):
     response.headers['Content-Disposition'] = "inline; filename=" + lang + '_' + ticket + '.conllu'
 
     return response
+
+@app.route("/kwic_download/<ticket>")
+def kdl(ticket):
+
+    content_gen = kwic_gen('./res/*' + ticket + '*.conllu')
+    response = Response(stream_with_context(content_gen))
+
+    response.headers['Content-Type'] = "application/octet-stream"
+    response.headers['Content-Disposition'] = "inline; filename=" + ticket + '.tsv'
+
+    return response
+
+
+@app.route("/kwic_download/<ticket>/<lang>")
+def kdll(ticket, lang):
+
+    content_gen = kwic_gen('./res/'+lang + '_' + ticket + '*.conllu')
+    response = Response(stream_with_context(content_gen))
+
+    response.headers['Content-Type'] = "application/octet-stream"
+    response.headers['Content-Disposition'] = "inline; filename=" + lang + '_' + ticket + '.tsv'
+
+    return response
+
+@app.route("/freqs/<ticket>/<lang>")
+def fr(ticket, lang):
+
+    return jsonify(get_freqs('./res/'+lang + '_' + ticket + '*.conllu'))
+
+@app.route("/freqs/<ticket>")
+def ffr(ticket):
+
+    return jsonify(get_freqs('./res/*' + ticket + '*.conllu'))
 
 '''
 @app.route("/start_query/<dbs>/<query>/<langs>/<limit>")
