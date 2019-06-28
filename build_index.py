@@ -87,9 +87,13 @@ def get_doc_url(comments):
     for c in comments:
         match=doc_url_re.match(c)
         if match:
-            return match.group(1)
+            return c
     else:
         return None
+
+
+
+
 
 def write_db_json(args):
     try:
@@ -182,10 +186,12 @@ if __name__=="__main__":
     f_db_times = []
     b_db_times = []
 
+    curr_url = None
 
     print ()
     print ()
     for counter,(sent,comments) in enumerate(src_data):
+
         #import pdb;pdb.set_trace()
         if len(sent)>sent_limit:
             continue #Skip too long sentences
@@ -220,12 +226,18 @@ if __name__=="__main__":
         arr_indexes = struct.unpack('=' + str(arr_cnt[0]) + 'I', blob[6+set_cnt[0]*4:6+set_cnt[0]*4+arr_cnt[0]*4])
         setarr_count.update(set_indexes + arr_indexes)
 
-        try:
-            doc_url=get_doc_url(comments)
-            if doc_url is not None:
-                solr_idx.new_doc(doc_url,args.lang)
-        except:
-            pass
+        #try:
+        #    doc_url=get_doc_url(comments)
+        #    if doc_url is not None:
+        #        solr_idx.new_doc(doc_url,args.lang)
+        #except:
+        #    pass
+        for c in comments:
+            if c.startswith('# </doc>'):
+                curr_url = None
+            if c.startswith('# <doc'):
+                curr_url = c
+                solr_idx.new_doc(curr_url,args.lang)
 
         if not count_ones_own_idx:
             tree_id=solr_idx.add_to_idx(comments, sent)

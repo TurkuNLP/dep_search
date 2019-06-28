@@ -282,7 +282,6 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
             #print (idx)
             #continue
 
-            #print ('xxx', idx)
             if idx == -1:
                 end_cnt += 1
                 #print (fdb.is_finished())
@@ -313,6 +312,8 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
 
                 #try:
                 print ('# lang:', fdb.get_lang(idx))
+                print ('# doc:', fdb.get_url(idx))
+
                 #except:
                 #    pass
                 for r in res_set:
@@ -323,7 +324,6 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
                         its_a_hit = True
                     except:
                         pass
-
                 if its_a_hit:
 
                     if args.context>0:

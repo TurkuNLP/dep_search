@@ -211,6 +211,10 @@ class Query():
     def get_lang(self, idx):
         return self.db.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8')).decode('utf8')
 
+    def get_url(self, idx):
+        return self.db.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8')).decode('utf8')
+
+
     def get_count(self, pref):
         counter = 0
 
@@ -307,7 +311,7 @@ class IDX(object):
         for v in set(val):
             self.db.put((v + '_' + str(idx)).encode('utf8'), b'1')
         
-        #self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
+        self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8'), self.url.encode('utf8'))
         self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8'))
         self.db.put('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1')
         return idx
