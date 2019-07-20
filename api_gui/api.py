@@ -185,7 +185,7 @@ def file_generator_lang(ticket, lang):
 
 def file_generator(ticket):
 
-    files = glob.glob('./res/*'+ticket+'.conllu')
+    files = glob.glob('./res/*'+ticket+'*.conllu')
     files.sort()
 
     sent_files = set()
@@ -200,7 +200,7 @@ def file_generator(ticket):
             sent_files.add(f)
 
         #
-        xfiles = set(glob.glob('./res/*'+ticket+'.conllu'))
+        xfiles = set(glob.glob('./res/*'+ticket+'*.conllu'))
         xx = xfiles - sent_files
         if len(xx) > 0:
             #
@@ -263,7 +263,9 @@ def fr(ticket, lang):
 @app.route("/freqs/<ticket>")
 def ffr(ticket):
 
-    return jsonify(get_freqs('./res/*' + ticket + '*.conllu'))
+    freqs = get_freqs('./res/*' + ticket + '*.conllu')
+    return json.dumps(freqs, indent=4, sort_keys=True)
+    #return jsonify(get_freqs('./res/*' + ticket + '*.conllu'))
 
 '''
 @app.route("/start_query/<dbs>/<query>/<langs>/<limit>")
