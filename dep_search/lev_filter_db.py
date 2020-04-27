@@ -212,7 +212,8 @@ class Query():
         return self.db.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8')).decode('utf8')
 
     def get_url(self, idx):
-        return self.db.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8')).decode('utf8')
+            return self.db.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8')).decode('utf8')
+            
 
 
     def get_count(self, pref):
@@ -249,7 +250,7 @@ class IDX(object):
     def __init__(self,args):
         self.args=args # List of documents to be pushed into solr at the next convenient occasion
         self.lang = args.lang
-        self.url = None
+        self.url = ""
 
         self.s=py_tree.Py_Tree()
         self.name = args.dir
@@ -303,6 +304,7 @@ class IDX(object):
 
 
     def add_to_idx_with_id(self, comments, sent, idx):
+        #print (idx, self.url)
         # get set ids
         val = self.set_idx_to_db_idx(self.s.set_list_from_conllu(sent, comments))
         #import pdb;pdb.set_trace()
@@ -310,7 +312,7 @@ class IDX(object):
         #idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
         for v in set(val):
             self.db.put((v + '_' + str(idx)).encode('utf8'), b'1')
-        
+
         self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8'), self.url.encode('utf8'))
         self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8'))
         self.db.put('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1')
@@ -325,8 +327,7 @@ class IDX(object):
         idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
         for v in set(val):
             self.db.put((v + '_' + str(idx)).encode('utf8'), b'1')
-        
-        #self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
+        self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + b'_url', self.lang.encode('utf8'))
         self.db.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8'))
         self.db.put('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1')
         return idx
