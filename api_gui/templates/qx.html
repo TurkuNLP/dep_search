@@ -132,14 +132,20 @@ $( document ).ready(function() {
         }
 
         console.log(checkBox.checked);
-        console.log('./start_query/'+db_str+'/'+ query + '/' + lang_str + '/' + limit + '/' + casex);
+        var queryUrl;
+        if (lang_str) {
+            queryUrl = './start_query/'+db_str+'/'+ query + '/' + lang_str + '/' + limit + '/' + casex;
+        } else {
+            queryUrl = './start_query/'+db_str+'/'+ query + '/' + limit + '/' + casex;
+        }
+        console.log(queryUrl);
 
 
 
 
 
         //launch
-        $.get('./start_query/'+db_str+'/'+ query + '/' + lang_str + '/' + limit + '/' + casex, function(data, status){
+        $.get(queryUrl, function(data, status){
 
 
             //"/show/<ticket>/<lang>/<int:start>/<int:end>"
