@@ -1,6 +1,6 @@
 # distutils: language = c++
 # distutils: libraries = lmdb
-# distutils: sources = tree_lmdb.cpp setlib/tset.cpp
+# distutils: sources = dep_search/tree_lmdb.cpp dep_search/setlib/tset.cpp
 #clib  setlib/setlib
 import struct
 import json

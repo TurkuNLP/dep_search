@@ -1,3 +1,3 @@
 git submodule init
 git submodule update
-make all
+pip install -e .

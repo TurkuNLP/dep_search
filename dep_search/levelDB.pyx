@@ -3,7 +3,7 @@
 
 from DB import BaseDB
 import plyvel
-cimport py_tree
+from dep_search cimport py_tree
 
 
 class LevelDB(BaseDB):

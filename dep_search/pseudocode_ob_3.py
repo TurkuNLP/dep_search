@@ -1,4 +1,4 @@
-from redone_expr import *
+from dep_search.redone_expr import *
 import sys
 import codecs
 import json
@@ -1051,23 +1051,11 @@ def id_the_nodes(node, pid, lev, negs_above, node_dict):
 
 def write_cython_code(lines, out):
 
-    magic_lines_linux = '''# cython: language_level=3
+    magic_lines = '''# cython: language_level=3
 # distutils: language = c++
-# distutils: include_dirs = setlib
-# distutils: extra_objects = setlib/pytset.so
-# distutils: sources = query_functions.cpp tree_lmdb.cpp
 include "search_common.pxi"\n'''
 
-    magic_lines_other = '''# cython: language_level=3
-# distutils: language = c++
-# distutils: include_dirs = setlib
-# distutils: sources = query_functions.cpp setlib/pytset.cpp
-include "search_common.pxi"\n'''
-
-    if 'linux' in sys.platform:
-        out.write(magic_lines_linux)
-    else:
-        out.write(magic_lines_other)
+    out.write(magic_lines)
 
     for line in lines:
         out.write(line + '\n')

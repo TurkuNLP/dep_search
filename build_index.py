@@ -12,7 +12,6 @@ import json
 import re
 import struct
 import os
-import dep_search.setlib.pytset as pytset
 import zlib
 import itertools
 #import py_tree_lmdb

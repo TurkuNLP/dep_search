@@ -9,7 +9,7 @@ import sys
 import pysolr
 import requests
 import json
-import py_tree
+from dep_search import py_tree
 import plyvel
 
 ID,FORM,LEMMA,UPOS,XPOS,FEATS,HEAD,DEPREL,DEPS,MISC=range(10)
@@ -244,7 +244,6 @@ class Query():
 
 
 
-import py_tree
 class IDX(object):
 
     def __init__(self,args):

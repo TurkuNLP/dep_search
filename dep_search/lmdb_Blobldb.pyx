@@ -2,7 +2,7 @@
 # distutils: language = c++
 from DB import BaseDB
 import lmdb
-cimport py_tree
+from dep_search cimport py_tree
 import os
 import copy
 
