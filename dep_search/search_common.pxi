@@ -1,9 +1,6 @@
-import sys
-sys.path.append('./dep_search/')
-sys.path.append('./dep_search/setlib')
 from libcpp cimport bool
 #from db_util cimport DB
-from setlib.pytset cimport PyTSet, PyTSetArray
+from dep_search.setlib.pytset cimport PyTSet, PyTSetArray
 from libc.stdlib cimport malloc
 from libc.stdint cimport uint32_t, uint16_t
 import sys

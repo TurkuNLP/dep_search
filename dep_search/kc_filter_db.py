@@ -9,7 +9,7 @@ import sys
 import pysolr
 import requests
 import json
-import py_tree
+from dep_search import py_tree
 from kyotocabinet import *
 
 ID,FORM,LEMMA,UPOS,XPOS,FEATS,HEAD,DEPREL,DEPS,MISC=range(10)

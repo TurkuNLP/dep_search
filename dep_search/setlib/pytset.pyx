@@ -1,5 +1,5 @@
 # distutils: language = c++
-# distutils: sources = tset.cpp
+# distutils: sources = dep_search/setlib/tset.cpp
 from libcpp cimport bool
 import struct
 

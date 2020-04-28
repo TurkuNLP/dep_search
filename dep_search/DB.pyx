@@ -2,7 +2,7 @@
 # distutils: language = c++
 import pickle
 import os
-cimport py_tree
+from dep_search cimport py_tree
 
 class BaseDB:
 

@@ -1,8 +1,8 @@
 # cython: language_level=3
 # distutils: language = c++
-from DB import BaseDB
+from dep_search.DB import BaseDB
 import plyvel
-cimport py_tree
+from dep_search cimport py_tree
 import os
 import copy
 

@@ -23,6 +23,14 @@ from freqs import get_freqs
 app = Flask(__name__)
 
 
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+RES_DIR = os.path.join(THIS_DIR, "res")
+
+
+def res_file(basename):
+    return os.path.join(RES_DIR, basename)
+
+
 def query_process(dbs, query, langs, ticket, limit=10000, case=False):
 
 
@@ -52,7 +60,7 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
 
     #Replace with call
     #open res file
-    outf_err = open('res/'+ticket+'.err','w')
+    outf_err = open(res_file(ticket+'.err'),'w')
 
 
     #query_py = 'cd ..;python3 query.py'
@@ -66,21 +74,19 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
 
     if len(langs) > 0:
         if case:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--res-dir', RES_DIR, '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
         else:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--res-dir', RES_DIR, '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
     else:
-        p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit) , '--context', '4', '--ticket', ticket ,query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr)
-
         if case:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--res-dir', RES_DIR, '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
         else:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--res-dir', RES_DIR, '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
 
 
 
 
-    xoutf = open('./res/' + ticket + '.json','wt')
+    xoutf = open(res_file(ticket + '.json'),'wt')
     xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket, 'limit': limit}))
     xoutf.close()
 
@@ -173,7 +179,7 @@ def file_generator_lang(ticket, lang):
     step = 10
     c = 0
     while True:
-        fname = './res/' + lang + '_' + ticket + '_' + str(c) + '.conllu'
+        fname = res_file(lang + '_' + ticket + '_' + str(c) + '.conllu')
         if not os.path.isfile(fname):
             break
         inf = open(fname, 'r')
@@ -185,7 +191,7 @@ def file_generator_lang(ticket, lang):
 
 def file_generator(ticket):
 
-    files = glob.glob('./res/*'+ticket+'*.conllu')
+    files = glob.glob(res_file('*'+ticket+'*.conllu'))
     files.sort()
 
     sent_files = set()
@@ -200,7 +206,7 @@ def file_generator(ticket):
             sent_files.add(f)
 
         #
-        xfiles = set(glob.glob('./res/*'+ticket+'*.conllu'))
+        xfiles = set(glob.glob(res_file('*'+ticket+'*.conllu')))
         xx = xfiles - sent_files
         if len(xx) > 0:
             #
@@ -235,7 +241,7 @@ def dll(ticket, lang):
 @app.route("/kwic_download/<ticket>")
 def kdl(ticket):
 
-    content_gen = kwic_gen('./res/*' + ticket + '*.conllu')
+    content_gen = kwic_gen(res_file('*' + ticket + '*.conllu'))
     response = Response(stream_with_context(content_gen))
 
     response.headers['Content-Type'] = "application/octet-stream"
@@ -247,7 +253,7 @@ def kdl(ticket):
 @app.route("/kwic_download/<ticket>/<lang>")
 def kdll(ticket, lang):
 
-    content_gen = kwic_gen('./res/'+lang + '_' + ticket + '*.conllu')
+    content_gen = kwic_gen(res_file(lang + '_' + ticket + '*.conllu'))
     response = Response(stream_with_context(content_gen))
 
     response.headers['Content-Type'] = "application/octet-stream"
@@ -258,12 +264,12 @@ def kdll(ticket, lang):
 @app.route("/freqs/<ticket>/<lang>")
 def fr(ticket, lang):
 
-    return jsonify(get_freqs('./res/'+lang + '_' + ticket + '*.conllu'))
+    return jsonify(get_freqs(res_file(lang + '_' + ticket + '*.conllu')))
 
 @app.route("/freqs/<ticket>")
 def ffr(ticket):
 
-    freqs = get_freqs('./res/*' + ticket + '*.conllu')
+    freqs = get_freqs(res_file('*' + ticket + '*.conllu'))
     return json.dumps(freqs, indent=4, sort_keys=True)
     #return jsonify(get_freqs('./res/*' + ticket + '*.conllu'))
 
@@ -310,7 +316,7 @@ def hello_qcc(dbs, query, langs, limit, case):
 @app.route("/query_info/<ticket>")
 def qinf(ticket):
     try:
-        inf = open('./res/' + ticket + '.json','rt')
+        inf = open(res_file(ticket + '.json'),'rt')
         rr = inf.read()
         inf.close()
     except:
@@ -327,7 +333,7 @@ def get_res_count(ticket):
 
     #fi_2304882037610770081_167740.conllu
 
-    files = glob.glob('./res/*' + ticket + '*.conllu')
+    files = glob.glob(res_file('*' + ticket + '*.conllu'))
 
     res = {}
     for f in files:
@@ -359,7 +365,7 @@ def get_res_count(ticket):
 
 @app.route("/is_query_finished/<ticket>")
 def gxet_res_count(ticket):
-    if os.path.exists('res/'+ticket+'.done'):
+    if os.path.exists(res_file(ticket+'.done')):
         return jsonify(True)
     else:
         return jsonify(False)
@@ -369,7 +375,7 @@ def get_langs(ticket):
 
     langs = set()
 
-    xx = open('./res/' + ticket + '.langs', 'r')
+    xx = open(res_file(ticket + '.langs'), 'r')
     langs = json.load(xx)
     xx.close()
 
@@ -381,7 +387,7 @@ def get_tree_count(ticket, lang):
     trees = 0
 
     curr_tree = []
-    inf = open('./res/' + ticket,'rt')
+    inf = open(res_file(ticket),'rt')
     for l in inf:
         curr_tree.append(l)
         if l == '\n':
@@ -425,7 +431,7 @@ def get_xtrees(ticket, lang, start, end):
     '''      
     if lang == 'undefined':
         #
-        inf = open('res/'+ticket+'.json', 'r')
+        inf = open(res_file(ticket+'.json'), 'r')
         db = json.load(inf)
         print (db)
         db = db["dbs"].split(',')[0]
@@ -487,7 +493,7 @@ def get_trees(ticket, lang, start, end):
     its_on = False
 
     #lets find a starting point
-    files = glob.glob('./res/' + lang + '_' + ticket + '*.conllu')
+    files = glob.glob(res_file(lang + '_' + ticket + '*.conllu'))
     files.sort()
     prev = ''
     filelist = []
@@ -529,7 +535,7 @@ def get_page_tree_count(ticket, lang, start, end):
     its_on = False
 
     #lets find a starting point
-    files = glob.glob('./res/' + lang + '_' + ticket + '*.conllu')
+    files = glob.glob(res_file(lang + '_' + ticket + '*.conllu'))
     files.sort()
     prev = ''
     filelist = []
@@ -570,7 +576,7 @@ def get_err(ticket):
 
     tc = 0
     curr_tree = []
-    inf = open('./res/'+ticket+'.err','rt')
+    inf = open(res_file(ticket+'.err'),'rt')
     err = inf.read()
     inf.close()
 
@@ -588,7 +594,7 @@ def tget_trees(ticket, lang, start, end):
 
     tc = 0
     curr_tree = []
-    inf = open('./res/' + ticket,'rt')
+    inf = open(res_file(ticket),'rt')
     for l in inf:
         curr_tree.append(l)
         if l == '\n':
