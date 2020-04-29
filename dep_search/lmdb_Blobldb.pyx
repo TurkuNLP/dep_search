@@ -1,6 +1,6 @@
 # cython: language_level=3
 # distutils: language = c++
-from DB import BaseDB
+from dep_search.DB import BaseDB
 import lmdb
 from dep_search cimport py_tree
 import os
