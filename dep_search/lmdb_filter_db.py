@@ -9,7 +9,7 @@ import sys
 import pysolr
 import requests
 import json
-import py_tree
+from dep_search cimport py_tree
 import lmdb
 import os
 
