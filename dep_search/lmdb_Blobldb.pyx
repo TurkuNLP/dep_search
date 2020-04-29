@@ -2,20 +2,20 @@
 # distutils: language = c++
 from DB import BaseDB
 import lmdb
-from dep_search cimport py_tree
+cimport py_tree
 import os
 import copy
 
 class DB(BaseDB):
 
     #
-    def __init__(self, name):
+    def __init__(self, name, cache=False):
         super().__init__(name)
         self.s=py_tree.Py_Tree()
         self.name = name
         self.blob = None
         self.next_free_tag_id = None
-
+        self.cache=cache
     #
     def open(self, foldername='/lmdb/'):
         #check if pickle exists
@@ -30,6 +30,23 @@ class DB(BaseDB):
 
         self.txn = self.env.begin(write=True)
         self.rtxn = self.env.begin()
+        if self.cache:
+            self.load_tags()
+
+
+    def load_tags(self):
+        self.tags = {}
+        vals = []
+        cursor = self.txn.cursor()
+        for key, value in cursor:
+            pref = b'tag_'
+            if key.startswith(pref):
+                self.tags[key] = int(value)
+                vals.append(int(value))
+        try:
+            self.next_free_tag_id = max(vals) + 1
+        except:
+            self.next_free_tag_id = 0
 
     #
     def close(self):
@@ -48,22 +65,28 @@ class DB(BaseDB):
     def has_id(self, idx):
         #print (idx)
 
-        idx = idx.encode('utf8')
-        #print (self.txn.get(b'tag_' + idx) != None)
-        return self.txn.get(b'tag_' + idx) != None
+        if self.cache:
+            return 'tag_'.encode('utf8') + idx.encode('utf8') in self.tags.keys()
+        else:
+            idx = idx.encode('utf8')
+            #print (self.txn.get(b'tag_' + idx) != None)
+            return self.txn.get(b'tag_' + idx) != None
     #
 
     def get_id_for(self, idx):
-
-
-        #print (idx, int(self.txn.get(('tag_' + idx).encode('utf8'))))
-        return int(self.txn.get(('tag_' + idx).encode('utf8')))
-
-    #
+        if self.cache:
+            return self.tags[('tag_' + idx).encode('utf8')]
+        else:
+            #print (idx, int(self.txn.get(('tag_' + idx).encode('utf8'))))
+            return int(self.txn.get(('tag_' + idx).encode('utf8')))
+    
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
             if self.next_free_tag_id == None:
                 self.next_free_tag_id = int(self.get_count('tag_'))
+
+            if self.cache:
+                self.tags[('tag_' + item).encode('utf8')] = self.next_free_tag_id
 
             self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
             self.txn.commit()

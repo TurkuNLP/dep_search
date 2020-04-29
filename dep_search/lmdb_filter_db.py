@@ -9,7 +9,7 @@ import sys
 import pysolr
 import requests
 import json
-from dep_search import py_tree
+import py_tree
 import lmdb
 import os
 
@@ -49,6 +49,10 @@ class Query():
                 self.processes[l] = Process(target=self.main_loop_lang, args=(l,))
                 self.processes[l].start()
         self.started = True
+
+
+    def get_url(self, idx):
+            return self.txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8'), default=b'').decode('utf8')
 
     def get_queue(self):
         return self.tree_id_queue

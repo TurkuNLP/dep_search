@@ -35,6 +35,10 @@ class Query():
     def get_queue(self):
         return self.tree_id_queue
 
+    def get_url(self, idx):
+        return ""
+
+
     #XXX
     def get_lang(self, idx):
         params = {u"q":"id:"+str(idx),u"wt":u"json",u"rows":1,u"fl":u"lang",u"sort":u"id asc"}
@@ -145,11 +149,11 @@ class Query():
         try:
 
             qry= self.get_solr_query()
-
+            if self.langs == ['']: self.langs = ["*"]
             if len(self.langs)>0:
                 qry = '(' + qry + ') AND (' + ' OR '.join(['lang:' + l for l in self.langs]) + ')'
 
-            #print >> sys.stderr, "Solr qry", qry.encode('utf8')
+            print ("Solr qry", qry.encode('utf8'))
             #### XXX TODO How many rows?
             beg=time.time()
             params = {u"q":qry,u"wt":u"csv",u"rows":2147483647,u"fl":u"id",u"sort":u"id asc"}
@@ -206,9 +210,9 @@ class IDX(object):
             try:
                 s=pysolr.Solr(self.solr_url,timeout=600)
                 self.tree_count+=len(self.documents) #sum(len(d[u"_childDocuments_"]) for d in self.documents)
-                print (self.tree_count, "trees in Solr")#, file=sys.stderr)
+                #print (self.tree_count, "trees in Solr")#, file=sys.stderr)
                 #print (self.documents)
-                #print (s.add(self.documents))
+                s.add(self.documents)
                 self.documents=[]
                 s.commit()
             except KeyboardInterrupt:
