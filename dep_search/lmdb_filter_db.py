@@ -198,6 +198,8 @@ class IDX(object):
         self.name = args.dir
         self.blob = None
         self.open()
+        self.transaction_count = 0
+        self.puts = []
 
     def open(self):
         #check if pickle exists
@@ -238,6 +240,9 @@ class IDX(object):
 
 
     def commit(self,force=False):
+        self.write_stuff()
+        self.txn.commit()
+        self.txn = self.env.begin(write=True)
         self.env.close()
         
     def new_doc(self,url,lang):
@@ -253,20 +258,28 @@ class IDX(object):
         #print (val)
         #idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
         for v in set(val):
-            self.txn.put((v + '_' + str(idx)).encode('utf8'), b'1')
-            self.txn.commit()
-            self.txn = self.env.begin(write=True)
+            self.puts.append(((v + '_' + str(idx)).encode('utf8'), b'1'))
+
+        #self.txn.commit()
+        #self.txn = self.env.begin(write=True)
         #self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
         #self.txn.put('tag_'.encode('utf8'), b'1')
-        self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8'))
-        self.txn.commit()
-        self.txn = self.env.begin(write=True)
-        self.txn.put('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1')
+        self.puts.append(('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8')))
+        #self.txn.commit()
+        #self.txn = self.env.begin(write=True)
+        self.puts.append(('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1'))
         self.txn.commit()
         #self.txn = self.env.begin(write=True)
         self.txn = self.env.begin(write=True)
         return idx
 
+
+    def write_stuff(self):
+        for k, v in self.puts:
+            self.txn.put(k, v)
+        self.txn.commit()
+        self.txn = self.env.begin(write=True)
+        self.puts = []
 
 
     def add_to_idx(self, comments, sent):
@@ -276,18 +289,24 @@ class IDX(object):
         #print (val)
         idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
         for v in set(val):
-            self.txn.put((v + '_' + str(idx)).encode('utf8'), b'1')
-            self.txn.commit()
-            self.txn = self.env.begin(write=True)
+            self.puts.append(((v + '_' + str(idx)).encode('utf8'), b'1'))
+            #self.txn.commit()
+            #self.txn = self.env.begin(write=True)
         #self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
         #self.txn.put('tag_'.encode('utf8'), b'1')
-        self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8'))
-        self.txn.commit()
-        self.txn = self.env.begin(write=True)
-        self.txn.put('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1')
-        self.txn.commit()
+        self.puts.append(('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8')))
+        #self.txn.commit()
         #self.txn = self.env.begin(write=True)
-        self.txn = self.env.begin(write=True)
+        self.puts.append(('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1'))
+        #self.txn.commit()
+        #self.txn = self.env.begin(write=True)
+        #self.txn = self.env.begin(write=True)
+        self.transaction_count += 1
+        if self.transaction_count > 500:
+            self.transaction_count = 0
+            self.write_stuff()
+            self.txn.commit()
+            self.txn = self.env.begin(write=True)
         return idx
 
     def get_count(self, pref):

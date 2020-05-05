@@ -16,6 +16,8 @@ class DB(BaseDB):
         self.blob = None
         self.next_free_tag_id = None
         self.cache=cache
+        self.puts = []
+        self.transaction_count = 0
     #
     def open(self, foldername='/lmdb/'):
         #check if pickle exists
@@ -50,7 +52,15 @@ class DB(BaseDB):
 
     #
     def close(self):
+        self.write_stuff()
         self.env.close()
+
+    def write_stuff(self):
+        for k, v in self.puts:
+            self.txn.put(k, v)
+        self.txn.commit()
+        self.txn = self.env.begin(write=True)
+        self.puts = []
 
     #
     def add_to_idx(self, comments, sent):
@@ -87,10 +97,15 @@ class DB(BaseDB):
 
             if self.cache:
                 self.tags[('tag_' + item).encode('utf8')] = self.next_free_tag_id
+                self.puts.append((('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8')))
+                if len(self.puts) > 50:
+                    self.write_stuff()
+                    self.transaction_count = 0
 
-            self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
-            self.txn.commit()
-            self.txn = self.env.begin(write=True)
+            else:
+                self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
+                self.txn.commit()
+                self.txn = self.env.begin(write=True)
 
 
             #self.db.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
@@ -109,9 +124,11 @@ class DB(BaseDB):
 
             
 
-        self.txn.put(('blob_'.encode('utf8') + blob_idx), blob)
-        self.txn.commit()
-        self.txn = self.env.begin(write=True)
+        self.puts.append((('blob_'.encode('utf8') + blob_idx), blob))
+        self.transaction_count += 1
+        if self.transaction_count > 50:
+            self.write_stuff()
+            self.transaction_count = 0
 
         return blob_idx
 
@@ -124,7 +141,9 @@ class DB(BaseDB):
 
     #
     def finish_indexing(self):
-        self.close()
+        pass
+        #self.write_stuff()
+        #self.close()
 
     def get_count(self, pref):
         counter = 0

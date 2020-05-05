@@ -127,8 +127,8 @@ if __name__=="__main__":
     parser.add_argument('--lang', default="unknown", help='Language. default: %(default)s')
     parser.add_argument('--source', default="unknown", help='Source (like UDv2, fi_pbank). default: %(default)s')
 
-    parser.add_argument('--blobdb', default="Blobldb", help='Blob database module. default: %(default)s')
-    parser.add_argument('--filterdb', default="lev_filter_db", help='Filter database module. default: %(default)s')
+    parser.add_argument('--blobdb', default="lmdb_Blobldb", help='Blob database module. default: %(default)s')
+    parser.add_argument('--filterdb', default="lmdb_filter_db", help='Filter database module. default: %(default)s')
 
 
     args = parser.parse_args(sys.argv[1:])
@@ -255,12 +255,8 @@ if __name__=="__main__":
             end = time.time()
             b_db_times.append(end-start)
 
-    else:
-        ###
-        try:
-            solr_idx.commit(force=True) #WHatever remains
-        except:
-            pass
+    solr_idx.commit(force=True) #WHatever remains
+
 
 
     print ("Average tree length:", lengths/float(counter))
