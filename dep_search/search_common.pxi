@@ -392,6 +392,10 @@ cdef class Search:  # base class for all searches
         self.set_size = len(p_set_ids)
         self.started = False
 
+    def set_tree_id(self, uint32_t tree_id, db):
+        blob = db.get_blob(tree_id)
+        has_sets = self.fill_from_blob(<char*>blob)
+
     def check_tree_id(self, uint32_t tree_id, db):
 
         #db.set_tree_to_id(tree_id)

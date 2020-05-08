@@ -378,22 +378,25 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
                         texts=[]
                         # get +/- context sentences from db
                         for i in range(idx-args.context,idx+args.context+1):
-                            if i==idx:
-                                data=hit
-                            else:
-                                q_obj.set_tree_id(i, db)
-                                data = q_obj.get_tree_text()
-                                data_comment = q_obj.get_tree_comms()
+                            try:
+                                if i==idx:
+                                    data=hit
+                                else:
+                                    q_obj.set_tree_id(i, db)
+                                    data = q_obj.get_tree_text()
+                                    data_comment = q_obj.get_tree_comms()
 
-                                if data is None or get_url(data_comment)!=hit_url:
-                                    continue
-                            text=u" ".join(t.split(u"\t",2)[1] for t in data.split(u"\n"))
-                            if i<idx:
-                                texts.append(u"# context-before: "+text)
-                            elif i==idx:
-                                texts.append(u"# context-hit: "+text)
-                            else:
-                                texts.append(u"# context-after: "+text)
+                                    if data is None or get_url(data_comment)!=hit_url:
+                                        continue
+                                text=u" ".join(t.split(u"\t",2)[1] for t in data.split(u"\n"))
+                                if i<idx:
+                                    texts.append(u"# context-before: "+text)
+                                elif i==idx:
+                                    texts.append(u"# context-hit: "+text)
+                                else:
+                                    texts.append(u"# context-after: "+text)
+                            except:
+                                pass
                         try:
                             print (u"\n".join(text for text in texts)).encode(u"utf-8")
                         except:
@@ -459,7 +462,7 @@ def query_from_db_api(q_obj, args, db, fdb, set_id_db):
         try:
             #print ('???')
             idx = q.get()
-            #print (idx)
+            print (idx)
             #continue
 
             #print ('xxx', idx)
