@@ -284,7 +284,8 @@ def load(pyxFile):
     if 'linux' in sys.platform:
         sources.append(rel("tree_lmdb.cpp"))
         import glob
-        setlibso = glob.glob(rel('setlib/pytset.*.so'))[0] 
+        setlibso = glob.glob(rel('setlib/pytset.*.so'))[0]
+        if len(setlibso) == 0: setlibso = "setlib/pytset.so"
         extra_objects = [rel(setlibso)]
     else:
         sources.append(rel("setlib/pytset.cpp"))
