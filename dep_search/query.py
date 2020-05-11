@@ -283,7 +283,9 @@ def load(pyxFile):
     sources = [pyxFile, rel("query_functions.cpp")]
     if 'linux' in sys.platform:
         sources.append(rel("tree_lmdb.cpp"))
-        extra_objects = [rel("setlib/pytset.so")]
+        import glob
+        setlibso = glob.glob(rel('setlib/pytset.*.so'))[0] 
+        extra_objects = [rel(setlibso)]
     else:
         sources.append(rel("setlib/pytset.cpp"))
     with stdout_redirector(sys.stderr.fileno()):
