@@ -15,9 +15,44 @@ from contextlib import contextmanager
 import io
 
 from dep_search import py_tree
-from build_index import read_conll
 from dep_search.query import load, get_query_mod
 
+def read_conll(inp,maxsent=0,skipfirst=0):
+    """ Read conll format file and yield one sentence at a time as a list of lists of columns. If inp is a string it will be interpreted as fi
+lename, otherwise as open file for reading in unicode"""
+    if isinstance(inp,str):
+        f=open(inp,u"rt")
+    else:
+        f=inp#codecs.getreader("utf-8")(inp) # read inp directly
+    count_yielded=0
+    count=0
+    sent=[]
+    comments=[]
+    for line in f:
+        line=line.strip()
+        if not line:
+            if sent:
+                count+=1
+                if count>skipfirst:
+                    count_yielded+=1
+                    yield sent, comments
+                if maxsent!=0 and count_yielded>=maxsent:
+                    break
+                sent=[]
+                comments=[]
+        elif line.startswith(u"#"):
+            if sent:
+                raise ValueError("Missing newline after sentence")
+            comments.append(line)
+            continue
+        else:
+            sent.append(line.split(u"\t"))
+    else:
+        if sent:
+            yield sent, comments
+
+    if isinstance(inp,(str, bytes)):
+        f.close() #Close it if you opened it
 
 
 def query_from_db(q_obj, args, db, inp_f):
