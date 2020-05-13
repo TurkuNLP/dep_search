@@ -8,39 +8,33 @@ A python3 toolkit for dependency tree search.
 ### Install
 
 cat ubuntu_18.10.needed_packages | xargs sudo apt-get install -y
-pip3 install -r requirements.txt
-
-git submodule init
-git submodule update
-make
+./install.sh
 
 #### Solr
 Core-configuration for Solr is included as folder solr_config, and is tested with Solr 6.6.5
 ### Indexing
-Indexing is performed with build_index.py. To index a few treebanks with default configuration, which is solr containing indexing information and Level-DB tree-blob data:
+Indexing is performed with build_index.py. To index a few treebanks with default configuration, which is lmdb:
 ~~~~
 $ cat ./test_data/ud/ud-treebanks-v2.3/UD_Polish-SZ/pl_sz-ud-train.conllu | python3 build_index.py --lang pl --d all_ud_db
 $ cat ./test_data/ud/ud-treebanks-v2.3/UD_Hindi-HDTB/hi_hdtb-ud-train.conllu | python3 build_index.py  --lang hi --d all_ud_db
 $ cat ./test_data/ud/ud-treebanks-v2.3/UD_Arabic-NYUAD/ar_nyuad-ud-train.conllu | python3 build_index.py  --lang ar --d all_ud_db
 ~~~~
 
-The same, but using Level-DB instead of using solr:
+The same, but using solr for finding potential hits and lmdb:
 ~~~~
-$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Polish-SZ/pl_sz-ud-train.conllu | python3 build_index.py --filterdb lev_filter_db --lang pl --d all_ud_db
-$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Hindi-HDTB/hi_hdtb-ud-train.conllu | python3 build_index.py  --filterdb lev_filter_db --lang hi --d all_ud_db
-$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Arabic-NYUAD/ar_nyuad-ud-train.conllu | python3 build_index.py --filterdb lev_filter_db --lang ar --d all_ud_db
+$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Polish-SZ/pl_sz-ud-train.conllu | python3 build_index.py --filterdb solr_filter_db --lang pl --d all_ud_db
+$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Hindi-HDTB/hi_hdtb-ud-train.conllu | python3 build_index.py  --filterdb solr_filter_db --lang hi --d all_ud_db
+$ cat ./test_data/ud/ud-treebanks-v2.3/UD_Arabic-NYUAD/ar_nyuad-ud-train.conllu | python3 build_index.py --filterdb solr_filter_db --lang ar --d all_ud_db
 ~~~~
 
 
 #### Available db modules:
+* LMDB
+     - lmdb_Blobldb, lmdb_filter_db
 * Solr
     - solr_blob_db, solr_filter_db
 * Level-DB
      - Blobldb, lev_filter_db
-* LMDB
-     - lmdb_Blobldb, lmdb_filter_db
-* Kyotocabinet
-     - kc_Blobldb, kc_filter_db
 * Pickle
     - PickleDB
 
@@ -68,7 +62,12 @@ $ cat ./test_data/ud/ud-treebanks-v2.3/UD_Hindi-HDTB/hi_hdtb-ud-train.conllu | p
 
 #### Query Language
 Query Language is documented here:
-XXX
+https://bionlp.utu.fi/searchexpressions-new.html
+
+### What works
+* indexing
+* querying
+* filtering text
 
 ### API & GUI
 XXX
