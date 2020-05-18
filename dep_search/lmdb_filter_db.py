@@ -20,7 +20,7 @@ class Query():
     def __init__(self,extra_terms, compulsory_items,or_groups, solr, case, q_obj, extra_params={}, langs=[]):
 
 
-        print (compulsory_items)
+        #print (compulsory_items)
 
         self.q_obj = q_obj
         self.extra_params = extra_params
@@ -45,7 +45,7 @@ class Query():
             self.processes['main'].start()
         else:
             for l in langs:
-                print (l)
+                #print (l)
                 self.processes[l] = Process(target=self.main_loop_lang, args=(l,))
                 self.processes[l].start()
         self.started = True
