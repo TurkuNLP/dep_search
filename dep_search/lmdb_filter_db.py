@@ -167,7 +167,7 @@ class Query():
             #cx += 1
 
     def get_lang(self, idx):
-        return self.txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), default=None)
+        return self.txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), default=None).decode('utf8')
 
 
     def get_count(self, pref):
