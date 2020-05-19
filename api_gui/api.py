@@ -71,7 +71,7 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
 
     print('db', dbs)
 
-
+    '''
     if len(langs) > 0:
         if case:
             p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--res-dir', RES_DIR, '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
@@ -82,7 +82,18 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
             p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--res-dir', RES_DIR, '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
         else:
             p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--res-dir', RES_DIR, '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+    '''
 
+    if len(langs) > 0:
+        if case:
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--case', query], cwd='../', stdout=subprocess.PIPE)
+        else:
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs,  query], cwd='../', stdout=subprocess.PIPE)
+    else:
+        if case:
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--case', query], cwd='../', stdout=subprocess.PIPE)
+        else:
+            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4',  query], cwd='../', stdout=subprocess.PIPE)
 
 
 
@@ -90,18 +101,55 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
     xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket, 'limit': limit}))
     xoutf.close()
 
-    '''
-    for l, err in p.communicate():
-        #write to res file
+    outf_files = {}
+    from collections import defaultdict
+    counts = defaultdict(int)
+    step = 10
+    buffer = bytes()
+    langs = set()
+    lang = '-'
+
+    tree = []
+    xoutf = open('xxx','wt')
+    for l in p.stdout:
         try:
-            outf_err.write(err.decode('utf8'))
-            outf_err.flush()
+            l = l.decode('utf8')
         except:
             pass
 
-    outf.close()
-    outf_err.close()
-    '''
+        xoutf.write(l+'>>>')
+        #l = l#outf.write(l.decode('utf8').strip()+'>>>\n')
+    
+    
+        #lines = cc.decode('utf8').split('\n')
+        
+        #for l in lines:
+        #l = l.decode('utf8')
+        tree.append(l)
+        #outf.write(l+'\n')
+        if len(l)<1 or l.startswith('\n'):
+            lang = 'unknown'
+            if tree[0].startswith('# lang'):
+                lang = tree[0].split(':')[-1].strip()
+                if lang not in langs:
+                    langs.add(lang)
+                    xx = open(res_file(ticket + '.langs'), 'w')
+                    xx.write(json.dumps(list(langs)))
+                    xx.close()
+                    
+            counts[lang] += 1
+            outf = open(res_file(lang + '_' + ticket + '_' + str(round(counts[lang],-1)) + '.conllu'), 'a+t')
+            #outf.write('>>>' + lang + '\n')
+            print (tree)
+            for tl in tree:
+                outf.write(tl)
+            outf.close()
+            tree = []
+    
+
+    outf = open(res_file(ticket+'.done'),'w')
+    outf.close()                    
+    xoutf.close()
 
 @app.route('/do_query/<dbs>/<query>/<m>/<langs>/')
 def xxquery_process(dbs, query, m, langs):
