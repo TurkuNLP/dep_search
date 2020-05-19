@@ -110,21 +110,11 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
     lang = '-'
 
     tree = []
-    xoutf = open('xxx','wt')
     for l in p.stdout:
         try:
             l = l.decode('utf8')
         except:
             pass
-
-        xoutf.write(l+'>>>')
-        #l = l#outf.write(l.decode('utf8').strip()+'>>>\n')
-    
-    
-        #lines = cc.decode('utf8').split('\n')
-        
-        #for l in lines:
-        #l = l.decode('utf8')
         tree.append(l)
         #outf.write(l+'\n')
         if len(l)<1 or l.startswith('\n'):
@@ -139,8 +129,6 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
                     
             counts[lang] += 1
             outf = open(res_file(lang + '_' + ticket + '_' + str(round(counts[lang],-1)) + '.conllu'), 'a+t')
-            #outf.write('>>>' + lang + '\n')
-            print (tree)
             for tl in tree:
                 outf.write(tl)
             outf.close()
@@ -149,8 +137,7 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
 
     outf = open(res_file(ticket+'.done'),'w')
     outf.close()                    
-    xoutf.close()
-
+    
 @app.route('/do_query/<dbs>/<query>/<m>/<langs>/')
 def xxquery_process(dbs, query, m, langs):
 
