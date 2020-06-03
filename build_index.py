@@ -130,6 +130,8 @@ if __name__=="__main__":
     parser.add_argument('--blobdb', default="lmdb_Blobldb", help='Blob database module. default: %(default)s')
     parser.add_argument('--filterdb', default="lmdb_filter_db", help='Filter database module. default: %(default)s')
 
+    parser.add_argument('--max-cache', default=50000, help='Cached tags during indexing default: %(default)s')
+    parser.add_argument('--map_size', default=1099511627776, help='Maximum database size. default: %(default)s')
 
     args = parser.parse_args(sys.argv[1:])
     write_db_json(args)
@@ -161,7 +163,7 @@ if __name__=="__main__":
     db.open()
     solr_idx=filter_db.IDX(args)
 
-    set_id_db = blob_db.DB(args.dir, cache=True)
+    set_id_db = blob_db.DB(args.dir, cache=True, map_size=int(args.map_size), max_cache=int(args.max_cache))
     set_id_db.open(foldername='/set_id_db/')
 
         
@@ -187,6 +189,10 @@ if __name__=="__main__":
 
     curr_url = None
 
+    from datetime import datetime
+    start_time = datetime.now()
+
+
     print ()
     print ()
     for counter,(sent,comments) in enumerate(src_data):
@@ -199,7 +205,7 @@ if __name__=="__main__":
 
         if (counter+1)%100 == 0:
 
-            print (counter+1,',',mean(s_db_times),',',mean(f_db_times),',',mean(b_db_times),',')
+            print (counter+1,',',mean(s_db_times),',',mean(f_db_times),',',mean(b_db_times),',',datetime.now()-start_time)
             #print (mean(f_db_times))
             #print (mean(b_db_times))
 

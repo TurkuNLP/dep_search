@@ -9,15 +9,18 @@ import copy
 class DB(BaseDB):
 
     #
-    def __init__(self, name, cache=False):
+    def __init__(self, name, cache=False, map_size=10485760*5000, max_cache=50000):
         super().__init__(name)
         self.s=py_tree.Py_Tree()
         self.name = name
         self.blob = None
         self.next_free_tag_id = None
         self.cache=cache
+        self.cache_limit = max_cache
+        self.cache_full = False
         self.puts = []
         self.transaction_count = 0
+        self.map_size = map_size
     #
     def open(self, foldername='/lmdb/'):
         #check if pickle exists
@@ -26,7 +29,7 @@ class DB(BaseDB):
         except:
             pass
 
-        self.env = lmdb.open(self.name + foldername, max_dbs=2, map_size=10485760*1000)
+        self.env = lmdb.open(self.name + foldername, max_dbs=2, map_size=self.map_size)
         #self.blob_db = self.env.open_db(b'blob')
         #self.set_db = self.env.open_db(b'sets')
 
@@ -76,33 +79,40 @@ class DB(BaseDB):
         #print (idx)
 
         if self.cache:
-            return 'tag_'.encode('utf8') + idx.encode('utf8') in self.tags.keys()
-        else:
-            idx = idx.encode('utf8')
-            #print (self.txn.get(b'tag_' + idx) != None)
-            return self.txn.get(b'tag_' + idx) != None
+            if 'tag_'.encode('utf8') + idx.encode('utf8') in self.tags.keys():
+                return True
+            
+        idx = idx.encode('utf8')
+        #print (self.txn.get(b'tag_' + idx) != None)
+        return self.txn.get(b'tag_' + idx) != None
     #
 
     def get_id_for(self, idx):
         if self.cache:
-            return self.tags[('tag_' + idx).encode('utf8')]
-        else:
-            #print (idx, int(self.txn.get(('tag_' + idx).encode('utf8'))))
-            return int(self.txn.get(('tag_' + idx).encode('utf8')))
+            try:
+                return self.tags[('tag_' + idx).encode('utf8')]
+            except:
+                pass
+        #else:
+        #print (idx, int(self.txn.get(('tag_' + idx).encode('utf8'))))
+        return int(self.txn.get(('tag_' + idx).encode('utf8')))
     
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
             if self.next_free_tag_id == None:
                 self.next_free_tag_id = int(self.get_count('tag_'))
 
-            if self.cache:
+            if self.cache and not self.cache_full:
+                
                 self.tags[('tag_' + item).encode('utf8')] = self.next_free_tag_id
+                if len(self.tags) > self.cache_limit: self.cache_full = True
                 self.puts.append((('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8')))
                 if len(self.puts) > 50:
                     self.write_stuff()
                     self.transaction_count = 0
 
             else:
+                #print ('!!')
                 self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
                 self.txn.commit()
                 self.txn = self.env.begin(write=True)
