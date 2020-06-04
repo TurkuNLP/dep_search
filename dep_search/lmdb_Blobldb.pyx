@@ -5,12 +5,24 @@ import lmdb
 from dep_search cimport py_tree
 import os
 import copy
+import pickle
+import struct
 
 class DB(BaseDB):
 
     #
     def __init__(self, name, cache=False, map_size=10485760*5000, max_cache=50000):
         super().__init__(name)
+        
+        '''
+        #load comp_dict
+        try:
+            inf = open(self.name + '/comp_dict.pickle','rb')
+            self.comp_dict = pickle.load(inf)
+            inf.close()
+        except:
+            self.comp_dict = {}
+        '''
         self.s=py_tree.Py_Tree()
         self.name = name
         self.blob = None
@@ -21,7 +33,14 @@ class DB(BaseDB):
         self.puts = []
         self.transaction_count = 0
         self.map_size = map_size
+        self.wlimit = 500
     #
+    '''
+    def write_comp_dict(self):
+        outf = open(self.name + '/comp_dict.pickle','wb')
+        pickle.dump(self.comp_dict, outf)
+        outf.close()
+    ''' 
     def open(self, foldername='/lmdb/'):
         #check if pickle exists
         try:
@@ -46,8 +65,9 @@ class DB(BaseDB):
         for key, value in cursor:
             pref = b'tag_'
             if key.startswith(pref):
-                self.tags[key] = int(value)
-                vals.append(int(value))
+                val = int(struct.unpack('I', value)[0])
+                self.tags[key] = val
+                vals.append(val)
         try:
             self.next_free_tag_id = max(vals) + 1
         except:
@@ -95,7 +115,7 @@ class DB(BaseDB):
                 pass
         #else:
         #print (idx, int(self.txn.get(('tag_' + idx).encode('utf8'))))
-        return int(self.txn.get(('tag_' + idx).encode('utf8')))
+        return int(struct.unpack('I', self.txn.get(('tag_' + idx).encode('utf8')))[0])
     
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
@@ -106,14 +126,15 @@ class DB(BaseDB):
                 
                 self.tags[('tag_' + item).encode('utf8')] = self.next_free_tag_id
                 if len(self.tags) > self.cache_limit: self.cache_full = True
-                self.puts.append((('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8')))
-                if len(self.puts) > 50:
+                self.puts.append((('tag_' + item).encode('utf8'), struct.pack("I", self.next_free_tag_id)))
+                if len(self.puts) > self.wlimit:
                     self.write_stuff()
                     self.transaction_count = 0
 
             else:
                 #print ('!!')
-                self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
+                #self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
+                self.txn.put(('tag_' + item).encode('utf8'), struct.pack("I", self.next_free_tag_id))
                 self.txn.commit()
                 self.txn = self.env.begin(write=True)
 
@@ -136,7 +157,7 @@ class DB(BaseDB):
 
         self.puts.append((('blob_'.encode('utf8') + blob_idx), blob))
         self.transaction_count += 1
-        if self.transaction_count > 50:
+        if self.transaction_count > self.wlimit:
             self.write_stuff()
             self.transaction_count = 0
 
