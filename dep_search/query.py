@@ -13,7 +13,7 @@ import copy
 from tempfile import gettempdir
 from contextlib import contextmanager
 import io
-
+import pickle
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -310,7 +310,7 @@ def get_url(comments):
     return None
 
 
-def query_from_db(q_obj, args, db, fdb, set_id_db):
+def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict):
 
     #init the dbs
     q_obj.set_db(set_id_db)
@@ -352,8 +352,8 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
             if len(res_set) > 0:
                 #tree
                 #import pdb;pdb.set_trace()
-                hit = q_obj.get_tree_text()
-                tree_comms = q_obj.get_tree_comms()
+                hit = q_obj.get_tree_text(comp_dict)
+                tree_comms = q_obj.get_tree_comms(comp_dict)
                 tree_lines=hit.split("\n")
 
                 if counter >= max_hits and max_hits > 0:
@@ -389,8 +389,8 @@ def query_from_db(q_obj, args, db, fdb, set_id_db):
                                     data=hit
                                 else:
                                     q_obj.set_tree_id(i, db)
-                                    data = q_obj.get_tree_text()
-                                    data_comment = q_obj.get_tree_comms()
+                                    data = q_obj.get_tree_text(comp_dict)
+                                    data_comment = q_obj.get_tree_comms(comp_dict)
 
                                     if data is None or get_url(data_comment)!=hit_url:
                                         continue
@@ -556,6 +556,10 @@ def main_db_query(args):
         extra_params= ast.literal_eval(args.extra_solr_params)
     except:
         extra_params = {}
+
+    inf = open(db_args['dir'] + '/comp_dict.pickle','rb')
+    comp_dict = pickle.load(inf)
+    inf.close()
     
     langs=[]
     if langs == "": 
@@ -571,7 +575,7 @@ def main_db_query(args):
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
 
 
-    total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db)
+    total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db, comp_dict)
 
     print ("Total number of hits:",total_hits,file=sys.stderr)
 

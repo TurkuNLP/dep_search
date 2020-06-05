@@ -22,6 +22,7 @@ import binascii
 #import DB
 #import Blobldb 
 import time
+import pickle
 
 ID,FORM,LEMMA,UPOS,XPOS,FEATS,HEAD,DEPREL,DEPS,MISC=range(10)
 
@@ -182,7 +183,7 @@ if __name__=="__main__":
     count_ones_own_idx = False
     self_idx = 0
 
-
+    dict_ready = False
     s_db_times = []
     f_db_times = []
     b_db_times = []
@@ -192,6 +193,13 @@ if __name__=="__main__":
     from datetime import datetime
     start_time = datetime.now()
 
+    #load comp_dict
+    try:
+        inf = open(args.dir + '/comp_dict.pickle','rb')
+        comp_dict = pickle.load(inf)
+        inf.close()
+    except:
+        comp_dict = {}
 
     print ()
     print ()
@@ -217,10 +225,20 @@ if __name__=="__main__":
             sys.stdout.flush()
 
         s=py_tree.Py_Tree()
+        s.set_comp_dict(comp_dict)
         start = time.time()
         blob, form =s.serialize_from_conllu(sent,comments,set_id_db) #Form is the struct module format for the blob, not used anywhere really
         end = time.time()
         s_db_times.append(end-start)
+
+        if not dict_ready:
+            scomp_dict = s.get_comp_dict()
+            if len(scomp_dict) == 65535:
+                dict_ready = True
+            comp_dict = scomp_dict
+            outf = open(args.dir + '/comp_dict.pickle','wb')
+            pickle.dump(comp_dict, outf)
+            outf.close()
 
         s.deserialize(blob)
         lengths+=len(sent)

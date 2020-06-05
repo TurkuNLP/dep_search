@@ -8,6 +8,8 @@ import zlib
 #import setlib.pytset as pytset
 from setlib.pytset cimport PyTSet, PyTSetArray
 from libcpp cimport bool
+from dep_search.dict_lzw import compress, decompress
+
 
 ID,FORM,LEMMA,UPOS,XPOS,FEAT,HEAD,DEPREL,DEPS,MISC=range(10)
 
@@ -49,7 +51,13 @@ cdef class Py_Tree:
         del self.thisptr
 
     def __init__(self):
-        pass
+        self.comp_dict = {}
+
+    def set_comp_dict(self, comp_dict):
+        self.comp_dict = comp_dict
+
+    def get_comp_dict(self):
+        return self.comp_dict
 
     def deserialize(self, char *binary_blob):
         self.thisptr.deserialize(<void *>binary_blob)
@@ -62,11 +70,9 @@ cdef class Py_Tree:
                    "lemmas":list(l[LEMMA] for l in lines),
                    "misc":list(l[MISC] for l in lines)}
 
-        #print lines
-        #I know, will fix
         tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
-        #print tree_text
-        tree_data_gz=zlib.compress(tree_text.encode('utf8'))  #json.dumps(tree_data)#json.dumps(tree_data)#zlib.compress(json.dumps(tree_data))
+        tree_data_gz, cd = compress(tree_text.encode('utf8'), self.comp_dict)
+        self.comp_dict = cd
         
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers
@@ -233,7 +239,8 @@ cdef class Py_Tree:
         #I know, will fix
         tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
         #print tree_text
-        tree_data_gz=zlib.compress(tree_text.encode('utf8'))  #json.dumps(tree_data)#json.dumps(tree_data)#zlib.compress(json.dumps(tree_data))
+        tree_data_gz, cd = compress(tree_text.encode('utf8'), self.comp_dict)
+        self.comp_dict = cd #json.dumps(tree_data)#json.dumps(tree_data)#zlib.compress(json.dumps(tree_data))
         
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers
@@ -341,8 +348,8 @@ cdef class Py_Tree:
         #print lines
         #I know, will fix
         tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
-        #print tree_text
-        tree_data_gz=zlib.compress(tree_text.encode('utf8'))  #json.dumps(tree_data)#json.dumps(tree_data)#zlib.compress(json.dumps(tree_data))
+        tree_data_gz, cd = compress(tree_text.encode('utf8'), self.comp_dict)
+        self.comp_dict = cd
 
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers

@@ -11,7 +11,7 @@ import struct
 class DB(BaseDB):
 
     #
-    def __init__(self, name, cache=False, map_size=10485760*5000, max_cache=50000):
+    def __init__(self, name, cache=False, map_size=10485760*5000, max_cache=500000):
         super().__init__(name)
         
         '''
@@ -33,7 +33,7 @@ class DB(BaseDB):
         self.puts = []
         self.transaction_count = 0
         self.map_size = map_size
-        self.wlimit = 500
+        self.wlimit = 2000
     #
     '''
     def write_comp_dict(self):
@@ -48,20 +48,22 @@ class DB(BaseDB):
         except:
             pass
 
-        self.env = lmdb.open(self.name + foldername, max_dbs=2, map_size=self.map_size)
+        self.env = lmdb.open(self.name + foldername, max_dbs=1, map_size=self.map_size)
         #self.blob_db = self.env.open_db(b'blob')
         #self.set_db = self.env.open_db(b'sets')
-
-        self.txn = self.env.begin(write=True)
-        self.rtxn = self.env.begin()
+        self.foldername = foldername
         if self.cache:
             self.load_tags()
 
-
+        self.rtxn = None
+        self.txn = self.env.begin(write=True)
+        
     def load_tags(self):
+    
+        rtxn = self.env.begin()
         self.tags = {}
         vals = []
-        cursor = self.txn.cursor()
+        cursor = rtxn.cursor()
         for key, value in cursor:
             pref = b'tag_'
             if key.startswith(pref):
@@ -122,7 +124,7 @@ class DB(BaseDB):
             if self.next_free_tag_id == None:
                 self.next_free_tag_id = int(self.get_count('tag_'))
 
-            if self.cache and not self.cache_full:
+            if self.cache:# and not self.cache_full:
                 
                 self.tags[('tag_' + item).encode('utf8')] = self.next_free_tag_id
                 if len(self.tags) > self.cache_limit: self.cache_full = True
@@ -132,7 +134,7 @@ class DB(BaseDB):
                     self.transaction_count = 0
 
             else:
-                #print ('!!')
+                print ('!!', self.name, self.foldername)
                 #self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
                 self.txn.put(('tag_' + item).encode('utf8'), struct.pack("I", self.next_free_tag_id))
                 self.txn.commit()
@@ -165,6 +167,8 @@ class DB(BaseDB):
 
     #
     def get_blob(self, idx):
+        if self.rtxn is None:
+            self.rtxn = self.env.begin()
         #print (self.txn.get(('blob_' + str(idx)).encode('utf8')))
         self.blob = self.rtxn.get(('blob_' + str(idx)).encode('utf8'), default=None)
         #print (self.blob)
