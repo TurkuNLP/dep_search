@@ -327,9 +327,9 @@ def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict):
     #import pdb;pdb.set_trace()
     while True:
         try:
-            #print ('???')
+            print ('???')
             idx = q.get()
-            #print (idx)
+            print (idx)
             #continue
 
             if idx == -1:

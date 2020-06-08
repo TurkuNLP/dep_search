@@ -7,11 +7,13 @@ import os
 import copy
 import pickle
 import struct
+from fdict import fdict, sfdict
+import sys
 
 class DB(BaseDB):
 
     #
-    def __init__(self, name, cache=False, map_size=10485760*5000, max_cache=500000):
+    def __init__(self, name, cache=False, map_size=15*1000000000, max_cache=500000):
         super().__init__(name)
         
         '''
@@ -34,13 +36,8 @@ class DB(BaseDB):
         self.transaction_count = 0
         self.map_size = map_size
         self.wlimit = 2000
+        self.tags = {}
     #
-    '''
-    def write_comp_dict(self):
-        outf = open(self.name + '/comp_dict.pickle','wb')
-        pickle.dump(self.comp_dict, outf)
-        outf.close()
-    ''' 
     def open(self, foldername='/lmdb/'):
         #check if pickle exists
         try:
@@ -49,31 +46,29 @@ class DB(BaseDB):
             pass
 
         self.env = lmdb.open(self.name + foldername, max_dbs=1, map_size=self.map_size)
-        #self.blob_db = self.env.open_db(b'blob')
-        #self.set_db = self.env.open_db(b'sets')
         self.foldername = foldername
         if self.cache:
-            self.load_tags()
+            pass#self.load_tags()
 
-        self.rtxn = None
-        self.txn = self.env.begin(write=True)
+        #self.rtxn = None
+        #self.txn = self.env.begin(write=True)
         
     def load_tags(self):
     
-        rtxn = self.env.begin()
-        self.tags = {}
-        vals = []
-        cursor = rtxn.cursor()
-        for key, value in cursor:
-            pref = b'tag_'
-            if key.startswith(pref):
-                val = int(struct.unpack('I', value)[0])
-                self.tags[key] = val
-                vals.append(val)
-        try:
-            self.next_free_tag_id = max(vals) + 1
-        except:
-            self.next_free_tag_id = 0
+        with self.env.begin() as rtxn:
+            self.tags = {}
+            vals = []
+            cursor = rtxn.cursor()
+            for key, value in cursor:
+                pref = b'tag_'
+                if key.startswith(pref):
+                    val = int(struct.unpack('I', value)[0])
+                    self.tags[key] = val
+                    vals.append(val)
+            try:
+                self.next_free_tag_id = max(vals) + 1
+            except:
+                self.next_free_tag_id = 0
 
     #
     def close(self):
@@ -81,19 +76,20 @@ class DB(BaseDB):
         self.env.close()
 
     def write_stuff(self):
-        for k, v in self.puts:
-            self.txn.put(k, v)
-        self.txn.commit()
-        self.txn = self.env.begin(write=True)
+        with self.env.begin(write=True) as txn:
+            for k, v in self.puts:
+                txn.put(k, v)
+
         self.puts = []
 
     #
     def add_to_idx(self, comments, sent):
         # get set ids
-        val = self.s.set_id_list_from_conllu(sent, comments, self)
-        idx = self.get_count('sets_'.encode('utf8'))
-        self.txn.put('sets_'.encode('utf8') + idx, str(val).encode('utf8'))
-        #self.txn.commit()
+        with self.env.begin(write=True) as txn:
+            val = self.s.set_id_list_from_conllu(sent, comments, self)
+            idx = self.get_count('sets_'.encode('utf8'))
+            txn.put('sets_'.encode('utf8') + idx, str(val).encode('utf8'))
+            #txn.commit()
         return idx
 
     #
@@ -106,7 +102,8 @@ class DB(BaseDB):
             
         idx = idx.encode('utf8')
         #print (self.txn.get(b'tag_' + idx) != None)
-        return self.txn.get(b'tag_' + idx) != None
+        with self.env.begin() as txn:
+            return txn.get(b'tag_' + idx) != None
     #
 
     def get_id_for(self, idx):
@@ -117,8 +114,10 @@ class DB(BaseDB):
                 pass
         #else:
         #print (idx, int(self.txn.get(('tag_' + idx).encode('utf8'))))
-        return int(struct.unpack('I', self.txn.get(('tag_' + idx).encode('utf8')))[0])
-    
+        with self.env.begin() as txn:
+            return int(struct.unpack('I', txn.get(('tag_' + idx).encode('utf8')))[0])
+
+
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
             if self.next_free_tag_id == None:
@@ -127,25 +126,22 @@ class DB(BaseDB):
             if self.cache:# and not self.cache_full:
                 
                 self.tags[('tag_' + item).encode('utf8')] = self.next_free_tag_id
-                if len(self.tags) > self.cache_limit: self.cache_full = True
+                if len(self.tags) > self.cache_limit:
+                    self.cache_full = True
+                    #print ('!!!!!')
+                    #self.tags = {}
                 self.puts.append((('tag_' + item).encode('utf8'), struct.pack("I", self.next_free_tag_id)))
                 if len(self.puts) > self.wlimit:
                     self.write_stuff()
                     self.transaction_count = 0
 
             else:
-                print ('!!', self.name, self.foldername)
+                #print ('!!', self.name, self.foldername)
                 #self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
-                self.txn.put(('tag_' + item).encode('utf8'), struct.pack("I", self.next_free_tag_id))
-                self.txn.commit()
-                self.txn = self.env.begin(write=True)
+                with self.env.begin() as txn:
+                    txn.put(('tag_' + item).encode('utf8'), struct.pack("I", self.next_free_tag_id))
 
-
-            #self.db.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
             self.next_free_tag_id += 1
-
-
-            #print ('store', item)
 
     #
     def store_blob(self, blob, blob_idx):
@@ -167,12 +163,11 @@ class DB(BaseDB):
 
     #
     def get_blob(self, idx):
-        if self.rtxn is None:
-            self.rtxn = self.env.begin()
+        with self.env.begin() as txn:
         #print (self.txn.get(('blob_' + str(idx)).encode('utf8')))
-        self.blob = self.rtxn.get(('blob_' + str(idx)).encode('utf8'), default=None)
-        #print (self.blob)
-        return self.blob
+            self.blob = txn.get(('blob_' + str(idx)).encode('utf8'), default=None)
+            #print (self.blob)
+            return self.blob
 
     #
     def finish_indexing(self):
@@ -185,11 +180,11 @@ class DB(BaseDB):
 
         if isinstance(pref, str):
             pref = pref.encode('utf8')
-        cursor = self.txn.cursor()
-        if not cursor.set_range(pref):
-            return b'0'
+        with self.env.begin().cursor() as cursor:
+            if not cursor.set_range(pref):
+                return b'0'
 
-        for key, value in cursor:
-            if key.startswith(pref):
-                counter += 1
+            for key, value in cursor:
+                if key.startswith(pref):
+                    counter += 1
         return str(counter).encode('utf8')

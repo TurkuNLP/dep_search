@@ -40,4 +40,5 @@ cdef extern from "tree_lmdb.h":
 
 cdef class Py_Tree:
     cdef Tree *thisptr
+    cdef dict comp_dict
     cdef int fill_sets(self, void **set_pointers, uint32_t *indices, unsigned char *types, unsigned char *optional, int size)

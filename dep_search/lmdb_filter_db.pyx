@@ -1,3 +1,5 @@
+# cython: language_level=3
+# distutils: language = c++
 import sys
 import requests
 import re
@@ -9,7 +11,7 @@ import sys
 import pysolr
 import requests
 import json
-from dep_search import py_tree
+from dep_search cimport py_tree
 import lmdb
 import os
 
@@ -37,7 +39,7 @@ class Query():
         #Init lmdb
         self.env = lmdb.open(self.dir + '/lmdb_filter/', max_dbs=2, map_size=10485760*1000)
         self.db = self.env.open_db()
-        self.txn = self.env.begin(write=True)
+        #self.txn = self.env.begin()
 
 	#Start the main loop thread
         if len(langs) < 1:
@@ -52,7 +54,8 @@ class Query():
 
 
     def get_url(self, idx):
-            return self.txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8'), default=b'').decode('utf8')
+        with self.env.begin() as txn:
+            return txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8'), default=b'').decode('utf8')
 
     def get_queue(self):
         return self.tree_id_queue
@@ -136,38 +139,40 @@ class Query():
         print (counts)
 
         rarest_pref=counts[0][1].encode('utf8')
-        cursor = self.txn.cursor()
-        #print (cursor.set_key(rarest_pref))
-        print (cursor.set_range(rarest_pref))
-        print (rarest_pref)
-        cx = 0
-        for key, val in cursor:
-            if not key.startswith(rarest_pref): continue
-            #print (key, val)
-            matches = 0
-            for c in counts:
+        with self.env.begin() as txn:
+            cursor = txn.cursor()
+            #print (cursor.set_key(rarest_pref))
+            print (cursor.set_range(rarest_pref))
+            print ('??', rarest_pref)
+            cx = 0
+            for key, val in cursor:
+                if not key.startswith(rarest_pref): continue
+                #print (key, val)
+                matches = 0
+                for c in counts:
 
-                found = False
-                try:
-                    if self.txn.get(c[1].encode('utf8') + '_'.encode('utf8') + key.split(b'_')[-1], default=None) != None:
-                        found = True
-                except:
                     found = False
-        
-                if not found:
-                    break
-                else:
-                    matches += 1
+                    try:
+                        if txn.get(c[1].encode('utf8') + '_'.encode('utf8') + key.split(b'_')[-1], default=None) != None:
+                            found = True
+                    except:
+                        found = False
+            
+                    if not found:
+                        break
+                    else:
+                        matches += 1
 
-            if matches == len(counts):
-                #print ('!!!!', int(idx[0].split('_'.encode('utf8'))[-1]))
-                yield int(key.split(b'_')[-1])#int(idx[0].split('_'.encode('utf8'))[-1])
-                #print ('!!', int(key.split(b'_')[-1]))
-                hits += 1
-            #cx += 1
+                if matches == len(counts):
+                    #print ('!!!!', int(idx[0].split('_'.encode('utf8'))[-1]))
+                    yield int(key.split(b'_')[-1])#int(idx[0].split('_'.encode('utf8'))[-1])
+                    #print ('!!', int(key.split(b'_')[-1]))
+                    hits += 1
+                #cx += 1
 
     def get_lang(self, idx):
-        return self.txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), default=None).decode('utf8')
+        with self.env.begin() as txn:
+            return txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), default=None).decode('utf8')
 
 
     def get_count(self, pref):
@@ -175,14 +180,15 @@ class Query():
 
         if isinstance(pref, str):
             pref = pref.encode('utf8')
-        cursor = self.txn.cursor()
-        if not cursor.set_range(pref):
-            return b'0'
+        with self.env.begin() as txn:    
+            cursor = txn.cursor()
+            if not cursor.set_range(pref):
+                return b'0'
 
-        for key, value in cursor:
-            if key.startswith(pref):
-                counter += 1
-        return str(counter).encode('utf8')
+            for key, value in cursor:
+                if key.startswith(pref):
+                    counter += 1
+            return str(counter).encode('utf8')
 
 
 
@@ -210,7 +216,7 @@ class IDX(object):
 
         self.env = lmdb.open(self.name + '/lmdb_filter/', max_dbs=2, map_size=10485760*1000)
         self.db = self.env.open_db()
-        self.txn = self.env.begin(write=True)
+        #self.txn = self.env.begin(write=True)
 
 
     def set_idx_to_db_idx(self, list_idx):
@@ -241,8 +247,8 @@ class IDX(object):
 
     def commit(self,force=False):
         self.write_stuff()
-        self.txn.commit()
-        self.txn = self.env.begin(write=True)
+        #self.txn.commit()
+        #self.txn = self.env.begin(write=True)
         self.env.close()
         
     def new_doc(self,url,lang):
@@ -268,18 +274,25 @@ class IDX(object):
         #self.txn.commit()
         #self.txn = self.env.begin(write=True)
         self.puts.append(('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1'))
-        self.txn.commit()
+        #self.txn.commit()
         #self.txn = self.env.begin(write=True)
-        self.txn = self.env.begin(write=True)
+        #self.txn = self.env.begin(write=True)
+        
+        self.transaction_count = len(self.puts)
+        if self.transaction_count > 500:
+            self.transaction_count = 0
+            self.write_stuff()        
+        
         return idx
 
 
     def write_stuff(self):
-        for k, v in self.puts:
-            self.txn.put(k, v)
-        self.txn.commit()
-        self.txn = self.env.begin(write=True)
-        self.puts = []
+        with self.env.begin(write=True) as txn:
+            for k, v in self.puts:
+                txn.put(k, v)
+            #self.txn.commit()
+            #txn = self.env.begin(write=True)
+            self.puts = []
 
 
     def add_to_idx(self, comments, sent):
@@ -301,12 +314,12 @@ class IDX(object):
         #self.txn.commit()
         #self.txn = self.env.begin(write=True)
         #self.txn = self.env.begin(write=True)
-        self.transaction_count += 1
+        self.transaction_count = len(self.puts)
         if self.transaction_count > 500:
             self.transaction_count = 0
             self.write_stuff()
-            self.txn.commit()
-            self.txn = self.env.begin(write=True)
+            #self.txn.commit()
+            #self.txn = self.env.begin(write=True)
         return idx
 
     def get_count(self, pref):
@@ -314,11 +327,12 @@ class IDX(object):
 
         if isinstance(pref, str):
             pref = pref.encode('utf8')
-        cursor = self.txn.cursor()
-        if not cursor.set_range(pref):
-            return b'0'
+        with self.env.begin() as txn:
+            cursor = txn.cursor()
+            if not cursor.set_range(pref):
+                return b'0'
 
-        for key, value in cursor:
-            if key.startswith(pref):
-                counter += 1
-        return str(counter).encode('utf8')
+            for key, value in cursor:
+                if key.startswith(pref):
+                    counter += 1
+            return str(counter).encode('utf8')

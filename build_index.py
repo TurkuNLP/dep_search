@@ -113,7 +113,13 @@ def write_db_json(args):
     json.dump(vars(args), outf, indent = 4)
     outf.close()
 
+def getCurrentMemoryUsage():
+    ''' Memory usage in kB '''
 
+    with open('/proc/self/status') as f:
+        memusage = f.read().split('VmRSS:')[1].split('\n')[0][:-3]
+
+    return int(memusage.strip())
 
 
 if __name__=="__main__":
@@ -131,8 +137,8 @@ if __name__=="__main__":
     parser.add_argument('--blobdb', default="lmdb_Blobldb", help='Blob database module. default: %(default)s')
     parser.add_argument('--filterdb', default="lmdb_filter_db", help='Filter database module. default: %(default)s')
 
-    parser.add_argument('--max-cache', default=50000, help='Cached tags during indexing default: %(default)s')
-    parser.add_argument('--map_size', default=1099511627776, help='Maximum database size. default: %(default)s')
+    parser.add_argument('--max-cache', default=1500000, help='Cached tags during indexing default: %(default)s')
+    parser.add_argument('--map_size', default=15000000000, help='Maximum database size. default: %(default)s')
 
     args = parser.parse_args(sys.argv[1:])
     write_db_json(args)
@@ -213,7 +219,7 @@ if __name__=="__main__":
 
         if (counter+1)%100 == 0:
 
-            print (counter+1,',',mean(s_db_times),',',mean(f_db_times),',',mean(b_db_times),',',datetime.now()-start_time)
+            print (counter+1,',',datetime.now()-start_time, ',', getCurrentMemoryUsage()/1000.0, 'MB')
             #print (mean(f_db_times))
             #print (mean(b_db_times))
 
@@ -230,7 +236,7 @@ if __name__=="__main__":
         blob, form =s.serialize_from_conllu(sent,comments,set_id_db) #Form is the struct module format for the blob, not used anywhere really
         end = time.time()
         s_db_times.append(end-start)
-
+        scomp_dict = {}
         if not dict_ready:
             scomp_dict = s.get_comp_dict()
             if len(scomp_dict) == 65535:
@@ -248,13 +254,12 @@ if __name__=="__main__":
         set_indexes = struct.unpack('=' + str(set_cnt[0]) + 'I', blob[6:6+set_cnt[0]*4])
         arr_indexes = struct.unpack('=' + str(arr_cnt[0]) + 'I', blob[6+set_cnt[0]*4:6+set_cnt[0]*4+arr_cnt[0]*4])
         setarr_count.update(set_indexes + arr_indexes)
-
         #try:
-        #    doc_url=get_doc_url(comments)
-        #    if doc_url is not None:
-        #        solr_idx.new_doc(doc_url,args.lang)
-        #except:
-        #    pass
+            doc_url=get_doc_url(comments)
+            if doc_url is not None:
+                solr_idx.new_doc(doc_url,args.lang)
+        except:
+            pass
         for c in comments:
             if c.startswith('# </doc>'):
                 curr_url = None
@@ -280,7 +285,6 @@ if __name__=="__main__":
             b_db_times.append(end-start)
 
     solr_idx.commit(force=True) #WHatever remains
-
 
 
     print ("Average tree length:", lengths/float(counter))
