@@ -136,14 +136,11 @@ class Query():
             counts.append((int(self.get_count(rec)), rec))
         #import pdb;pdb.set_trace()
         counts.sort()
-        print (counts)
 
         rarest_pref=counts[0][1].encode('utf8')
         with self.env.begin() as txn:
             cursor = txn.cursor()
             #print (cursor.set_key(rarest_pref))
-            print (cursor.set_range(rarest_pref))
-            print ('??', rarest_pref)
             cx = 0
             for key, val in cursor:
                 if not key.startswith(rarest_pref): continue
