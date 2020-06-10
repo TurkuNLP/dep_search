@@ -2,7 +2,6 @@
 
 ### General Notes
 
-!!! WORK IN PROGRESS !!!
 A python3 toolkit for dependency tree search.
 
 ### Install
