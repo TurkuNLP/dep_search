@@ -254,7 +254,7 @@ if __name__=="__main__":
         set_indexes = struct.unpack('=' + str(set_cnt[0]) + 'I', blob[6:6+set_cnt[0]*4])
         arr_indexes = struct.unpack('=' + str(arr_cnt[0]) + 'I', blob[6+set_cnt[0]*4:6+set_cnt[0]*4+arr_cnt[0]*4])
         setarr_count.update(set_indexes + arr_indexes)
-        #try:
+        try:
             doc_url=get_doc_url(comments)
             if doc_url is not None:
                 solr_idx.new_doc(doc_url,args.lang)
