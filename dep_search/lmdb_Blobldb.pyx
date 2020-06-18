@@ -13,7 +13,7 @@ import sys
 class DB(BaseDB):
 
     #
-    def __init__(self, name, cache=False, map_size=15*1000000000, max_cache=500000):
+    def __init__(self, name, cache=False, map_size=150*1000000000, write_map=False):
         super().__init__(name)
         
         '''
@@ -30,13 +30,14 @@ class DB(BaseDB):
         self.blob = None
         self.next_free_tag_id = None
         self.cache=cache
-        self.cache_limit = max_cache
+        self.cache_limit = 50000
         self.cache_full = False
         self.puts = []
         self.transaction_count = 0
         self.map_size = map_size
         self.wlimit = 2000
         self.tags = {}
+        self.write_map = write_map
     #
     def open(self, foldername='/lmdb/'):
         #check if pickle exists
@@ -45,7 +46,7 @@ class DB(BaseDB):
         except:
             pass
 
-        self.env = lmdb.open(self.name + foldername, max_dbs=1, map_size=self.map_size)
+        self.env = lmdb.open(self.name + foldername, max_dbs=1, map_size=self.map_size, writemap=self.write_map)
         self.foldername = foldername
         if self.cache:
             pass#self.load_tags()
@@ -78,7 +79,10 @@ class DB(BaseDB):
     def write_stuff(self):
         with self.env.begin(write=True) as txn:
             for k, v in self.puts:
-                txn.put(k, v)
+                try:
+                    txn.put(k, v)
+                except:
+                    print (self.name)
 
         self.puts = []
 
@@ -126,10 +130,6 @@ class DB(BaseDB):
             if self.cache:# and not self.cache_full:
                 
                 self.tags[('tag_' + item).encode('utf8')] = self.next_free_tag_id
-                if len(self.tags) > self.cache_limit:
-                    self.cache_full = True
-                    #print ('!!!!!')
-                    #self.tags = {}
                 self.puts.append((('tag_' + item).encode('utf8'), struct.pack("I", self.next_free_tag_id)))
                 if len(self.puts) > self.wlimit:
                     self.write_stuff()

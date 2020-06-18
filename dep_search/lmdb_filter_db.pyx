@@ -35,9 +35,8 @@ class Query():
         self.finished = {}
         self.started = False
         self.processes = {}
-
-        #Init lmdb
-        self.env = lmdb.open(self.dir + '/lmdb_filter/', max_dbs=2, map_size=10485760*1000)
+        #Init lmdb                                                           1099511627776
+        self.env = lmdb.open(self.dir + '/lmdb_filter/', max_dbs=1, map_size=1099511627776)
         self.db = self.env.open_db()
         #self.txn = self.env.begin()
 
@@ -211,7 +210,7 @@ class IDX(object):
         except:
             pass
 
-        self.env = lmdb.open(self.name + '/lmdb_filter/', max_dbs=2, map_size=10485760*1000)
+        self.env = lmdb.open(self.name + '/lmdb_filter/', max_dbs=1, map_size=self.args.map_size, writemap=self.args.write_map)
         self.db = self.env.open_db()
         #self.txn = self.env.begin(write=True)
 
