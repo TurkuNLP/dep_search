@@ -222,71 +222,8 @@ if __name__=="__main__":
             if max(len(cols[FORM]) for cols in sent)>50 or max(len(cols[LEMMA]) for cols in sent)>50:
                 continue
 
-<<<<<<< HEAD
+
             if (counter+1)%100 == 0:
-=======
-        if (counter+1)%100 == 0:
-
-            print (counter+1,',',datetime.now()-start_time, ',', getCurrentMemoryUsage()/1000.0, 'MB')
-            #print (mean(f_db_times))
-            #print (mean(b_db_times))
-
-            s_db_times = []
-            f_db_times = []
-            b_db_times = []
-
-            #print ("At tree ", counter+1)
-            sys.stdout.flush()
-
-        s=py_tree.Py_Tree()
-        s.set_comp_dict(comp_dict)
-        start = time.time()
-        blob, form =s.serialize_from_conllu(sent,comments,set_id_db) #Form is the struct module format for the blob, not used anywhere really
-        end = time.time()
-        s_db_times.append(end-start)
-        scomp_dict = {}
-        if not dict_ready:
-            scomp_dict = s.get_comp_dict()
-            if len(scomp_dict) == 65535:
-                dict_ready = True
-            comp_dict = scomp_dict
-            outf = open(args.dir + '/comp_dict.pickle','wb')
-            pickle.dump(comp_dict, outf)
-            outf.close()
-
-        s.deserialize(blob)
-        lengths+=len(sent)
-        counter+=1
-        set_cnt = struct.unpack('=H', blob[2:4])
-        arr_cnt = struct.unpack('=H', blob[4:6])
-        set_indexes = struct.unpack('=' + str(set_cnt[0]) + 'I', blob[6:6+set_cnt[0]*4])
-        arr_indexes = struct.unpack('=' + str(arr_cnt[0]) + 'I', blob[6+set_cnt[0]*4:6+set_cnt[0]*4+arr_cnt[0]*4])
-        setarr_count.update(set_indexes + arr_indexes)
-        try:
-            doc_url=get_doc_url(comments)
-            if doc_url is not None:
-                solr_idx.new_doc(doc_url,args.lang)
-        except:
-            pass
-        for c in comments:
-            if c.startswith('# </doc>'):
-                curr_url = None
-            if c.startswith('# <doc'):
-                curr_url = c
-                solr_idx.new_doc(curr_url,args.lang)
-
-        if not count_ones_own_idx:
-            tree_id=solr_idx.add_to_idx(comments, sent)
-            db.store_blob(blob, tree_id)
-            count_ones_own_idx = True
-            self_idx = tree_id
-        else:
-            self_idx += 1
-            start = time.time()
-            solr_idx.add_to_idx_with_id(comments, sent, self_idx)
-            end = time.time()
-            f_db_times.append(end-start)
->>>>>>> 6fea2f16ad55cbbfb14976efc5cbe4a1684cb067
 
                 print (counter+1,',',datetime.now()-start_time, ',', getCurrentMemoryUsage()/1000.0, 'MB')
                 #print (mean(f_db_times))
