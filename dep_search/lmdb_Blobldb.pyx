@@ -7,7 +7,6 @@ import os
 import copy
 import pickle
 import struct
-from fdict import fdict, sfdict
 import sys
 
 class DB(BaseDB):
