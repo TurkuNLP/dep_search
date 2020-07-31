@@ -513,10 +513,10 @@ def main_db_query(args):
     inf.close()
 
     db_class = importlib.import_module('dep_search.' + db_args['blobdb'])
-    db = db_class.DB(db_args['dir'])
+    db = db_class.DB(args.database)
     db.open()
 
-    set_id_db = db_class.DB(db_args['dir'])
+    set_id_db = db_class.DB(args.database)
     set_id_db.open(foldername = '/set_id_db/')
 
     solr_url = db_args['solr']
@@ -543,7 +543,7 @@ def main_db_query(args):
     #inf.close()
 
     #db_class = importlib.import_module(db_args['blobdb'])
-    #db = db_class.DB(db_args['dir'])
+    #db = db_class.DB(args.database)
     #db.open()
 
     #... and lets load the filter db for fetching the filter list
@@ -555,7 +555,7 @@ def main_db_query(args):
     except:
         extra_params = {}
 
-    inf = open(db_args['dir'] + '/comp_dict.pickle','rb')
+    inf = open(args.database + '/comp_dict.pickle','rb')
     comp_dict = pickle.load(inf)
     inf.close()
     
@@ -568,7 +568,7 @@ def main_db_query(args):
         langs = args.langs.split(',')
 
     if not db_args['filterdb'].startswith('solr_filter_db'):
-        fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, db_args['dir'], args.case, query_obj, extra_params=extra_params, langs=langs)
+        fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, args.database, args.case, query_obj, extra_params=extra_params, langs=langs)
     else:
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
 
