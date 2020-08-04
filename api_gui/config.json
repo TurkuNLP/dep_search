@@ -1,6 +1,6 @@
 {
 
-    "approot" : "/ds_demo",
+    "approot" : "",
     "allow_unlimited_limit" : false,
     "max_result_limit" : 50000
 
