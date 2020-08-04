@@ -138,7 +138,7 @@ if __name__=="__main__":
     parser.add_argument('--filterdb', default="lmdb_filter_db", help='Filter database module. default: %(default)s')
 
     parser.add_argument('--write_map', default=False, action="store_true", help='Write_map for lmdb, increases indexing performance at possible cost for db stability.')
-    parser.add_argument('--map_size', default=15000000000, help='Maximum single lmdb database file size. default: %(default)s')
+    parser.add_argument('--map_size', type=int, default=15000000000, help='Maximum single lmdb database file size. default: %(default)s')
 
     args = parser.parse_args(sys.argv[1:])
     write_db_json(args)
