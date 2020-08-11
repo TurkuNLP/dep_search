@@ -23,6 +23,7 @@ import binascii
 #import Blobldb 
 import time
 import pickle
+import copy
 
 ID,FORM,LEMMA,UPOS,XPOS,FEATS,HEAD,DEPREL,DEPS,MISC=range(10)
 
@@ -139,8 +140,14 @@ if __name__=="__main__":
 
     parser.add_argument('--write_map', default=False, action="store_true", help='Write_map for lmdb, increases indexing performance at possible cost for db stability.')
     parser.add_argument('--map_size', type=int, default=15000000000, help='Maximum single lmdb database file size. default: %(default)s')
+    parser.add_argument('--cut_database_by_trees', type=int, default=0, help='If this value is not 0, it will cut the database into multiple databases. This value is the maximum trees per database. default: %(default)s')
 
     args = parser.parse_args(sys.argv[1:])
+    
+    base_dir = args.dir
+    if args.cut_database_by_trees > 0:
+        args.dir += '_part_0'
+       
     write_db_json(args)
 
 #    gather_tbl_names(codecs.getreader("utf-8")(sys.stdin))
@@ -151,6 +158,10 @@ if __name__=="__main__":
         print (cmd, file=sys.stderr)
         os.system(cmd)
         pysolr.Solr(args.solr,timeout=10000000).delete(q="*:*")
+
+    part = 0
+
+
 
 
     #Load the database modules
@@ -165,6 +176,10 @@ if __name__=="__main__":
 
     #blob_db = importlib.import_module(args.blobdb, package='dep_search')
     #filter_db = importlib.import_module(args.filterdb, package='dep_search')
+    #if args.cut_database_by_trees > 0:
+    #    args.dir = args.dir + '_part_' + str(part)
+    #    part += 1
+
 
     db = blob_db.DB(args.dir, map_size=150000000000)
     db.open()
@@ -211,6 +226,8 @@ if __name__=="__main__":
     except:
         comp_dict = {}
 
+
+    args.dir = base_dir
     print ()
     print ()
     try:
@@ -221,6 +238,48 @@ if __name__=="__main__":
                 continue #Skip too long sentences
             if max(len(cols[FORM]) for cols in sent)>50 or max(len(cols[LEMMA]) for cols in sent)>50:
                 continue
+
+            if args.cut_database_by_trees > 0 and (counter+1)%args.cut_database_by_trees == 0:
+                #close db
+                
+                solr_idx.commit(force=True) #WHatever remains
+                print ("Average tree length:", lengths/float(counter))
+                db.close()
+                db.finish_indexing()
+                #open a new one
+                self_idx = 0
+                outf = open(args.dir + '_part_' + str(part) + '/comp_dict.pickle','wb')
+                pickle.dump(comp_dict, outf)
+                outf.close()
+                
+                part += 1
+                db = blob_db.DB(args.dir + '_part_' + str(part), map_size=150000000000)
+                db.open()
+                gargs = copy.deepcopy(args)
+                gargs.dir = args.dir + '_part_' + str(part)
+                solr_idx=filter_db.IDX(gargs)
+
+                #int(args.map_size)
+                if args.blobdb == 'lmdb_Blobldb':
+                    set_id_db = blob_db.DB(args.dir + '_part_' + str(part), cache=True, map_size=args.map_size, write_map=args.write_map)
+                else:
+                    set_id_db = blob_db.DB(args.dir + '_part_' + str(part))
+                set_id_db.open(foldername='/set_id_db/')
+
+
+                if os.path.exists(args.dir + '_part_' + str(part)+'/langs'):
+                    outf = open(args.dir + '_part_' + str(part)+'/langs', 'at')
+                else:
+                    outf = open(args.dir + '_part_' + str(part)+'/langs', 'wt')
+
+                outf.write(args.lang + '\n')
+                outf.close()
+
+                outf = open(args.dir + '_part_' + str(part) +'/db_config.json', 'wt')
+                json.dump(vars(args), outf, indent = 4)
+                outf.close()                
+
+
 
 
             if (counter+1)%100 == 0:
@@ -248,9 +307,15 @@ if __name__=="__main__":
                 if len(scomp_dict) == 65535:
                     dict_ready = True
                 comp_dict = scomp_dict
-                outf = open(args.dir + '/comp_dict.pickle','wb')
-                pickle.dump(comp_dict, outf)
-                outf.close()
+                if args.cut_database_by_trees > 0:
+                    outf = open(args.dir + '_part_' + str(part) + '/comp_dict.pickle','wb')
+                    pickle.dump(comp_dict, outf)
+                    outf.close()
+                    
+                else:
+                    outf = open(args.dir + '/comp_dict.pickle','wb')
+                    pickle.dump(comp_dict, outf)
+                    outf.close()
 
             s.deserialize(blob)
             lengths+=len(sent)
