@@ -4,7 +4,7 @@ import glob
 def main():
 
     pairs = []
-    for f in glob.glob('./uds/UD_*')[:15]:
+    for f in glob.glob('./uds/UD_*'):
         try:
             #print (f)
             #print (f.split('_')[1].split('-')[0])
@@ -14,7 +14,7 @@ def main():
 
     for l, f in pairs:
         #
-        print ('cat ' + f + ' | python3 build_index.py --filterdb lev_filter_db -d xxx --lang ' + l)
+        print ('cat ' + f + ' | python3 build_index.py -d ./ud_dbs/' + f.split('/')[-1].split('.')[0] + ' --lang ' + l)
 
 
 main()

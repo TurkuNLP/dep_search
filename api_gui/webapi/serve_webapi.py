@@ -6,7 +6,6 @@ import glob
 import random
 import os.path
 import available_corpora
-from local_config import SOLR_URL,LMDB_PATH
 
 DEFAULT_PORT=45678
 
@@ -38,14 +37,14 @@ MAXCONTEXT=10
 
 @app.route("/metadata",methods=["GET"],strict_slashes=False)
 def get_metadata():
-    corpora=available_corpora.get_corpora(os.path.join(THISDIR,"corpora.yaml"),SOLR_URL)
+    corpora=available_corpora.get_corpora(os.path.join(THISDIR,"corpora.yaml"))
     corpus_groups=available_corpora.get_corpus_groups(os.path.join(THISDIR,"corpus_groups.yaml"),corpora)
     res={"corpus_groups":corpus_groups}
     return json.dumps(res)
 
 @app.route("/",methods=["GET"])
 def run_query():
-    #corpora=available_corpora.get_corpora(os.path.join(THISDIR,"corpora.yaml"),SOLR_URL)
+    corpora=available_corpora.get_corpora(os.path.join(THISDIR,"corpora.yaml"))
     if "search" not in flask.request.args:
         return flask.Response(help_response)
     retmax=int(flask.request.args.get("retmax",1000)) #default is 1000
@@ -63,14 +62,28 @@ def run_query():
         ctx=min(ctx,MAXCONTEXT)
         extra_args.append("--context")
         extra_args.append(str(ctx))
-    #if "shuffle" in flask.request.args
-    sources=list(s.strip() for s in flask.request.args["db"].split(","))
-    sources=" OR ".join(sources)
-    extra_args.extend(["--extra",'+source:(%s)'%sources])
     
+    dbs=[]
+    for corpus in flask.request.args.get("db","").split(","):
+        print (corpora, corpus)
+        c=corpora.get(corpus) #corpus should be the ID
+        if not c: #not found? maybe it's the name!
+            for some_c in corpora.values():
+                if some_c["name"]==corpus:
+                    c=some_c
+                    break
+        if not c:
+            continue
+        dbs.extend(c["dbs"])
+    if "shuffle" in flask.request.args:
+        random.shuffle(dbs)
+    else:
+        dbs=sorted(dbs)
+
     def generate():
-        args=["python","query.py"]+["--solr",SOLR_URL,"-d",LMDB_PATH]+extra_args+["-m",str(retmax),flask.request.args["search"].encode("utf-8")]
-        print >> sys.stderr, "Running", args
+        args=["python3","query.py"]+extra_args+["-m",str(retmax),flask.request.args["search"].encode("utf-8"),"-d"]+[','.join(dbs)]
+        #print >> sys.stderr, "Running", args
+        print("Running " + str(args), file=sys.stderr)
         proc=sproc.Popen(args=args,cwd="..",stdout=sproc.PIPE)
         for line in proc.stdout:
             yield line

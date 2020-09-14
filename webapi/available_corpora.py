@@ -21,6 +21,7 @@ class Corpus(object):
 
 def get_corpora(corpora_yaml):
     corpora={} # id -> Corpus()
+    print (corpora_yaml)
     with open(corpora_yaml) as f:
         for corpus_id, corpus_data in yaml.load(f).items():
             if corpus_id.startswith("wildcard_"): #wildcard, look for pathglob

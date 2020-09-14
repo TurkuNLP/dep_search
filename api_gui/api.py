@@ -20,6 +20,14 @@ import os.path
 from kwic import kwic_gen
 from freqs import get_freqs 
 
+import os
+from collections import defaultdict
+from os import path
+from flask import Flask, request
+dd = defaultdict(dict)
+
+
+
 app = Flask(__name__)
 
 
@@ -34,7 +42,7 @@ def res_file(basename):
 def query_process(dbs, query, langs, ticket, limit=10000, case=False):
 
 
-
+    print ('!!!', str(langs))
     limit = int(limit)
     try:
 
@@ -54,46 +62,47 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
     except:
         pass
 
-    inf = open('dbs.json','rt')
-    xdbs = json.load(inf)
-    inf.close()
+    xdbs = get_flat_dbs()
 
     #Replace with call
     #open res file
     outf_err = open(res_file(ticket+'.err'),'w')
 
 
-    #query_py = 'cd ..;python3 query.py'
-    #cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
-    #os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
-
+    xdb_string = []
+    langs = langs.split(',')
+    for x in dbs.split(','):
+        print ('*!*',x, len(langs), langs)
+        if len(langs) > 0 and len(langs[0]) > 0:
+            langs_in_db = get_db_langs([x])
+            if len(set(langs).intersection(set(langs_in_db))) > 0:
+                print ("**")
+                xdb_string.append(xdbs[x])
+        else:
+            print ('ebb')
+            xdb_string.append(xdbs[x])
+            
+    db_string = ','.join(xdb_string)
+    print ('!!', db_string, xdb_string)
+    if len(db_string) < 1:
+        db_string = xdbs[dbs]
+    
+    print (dbs)
+    print ('!!', db_string)
     os.system('python3 res_cleaner.py &')
+    langs = ','.join(langs)
 
-    print('db', dbs)
-
-    '''
+    print (langs, db_string)
     if len(langs) > 0:
         if case:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--res-dir', RES_DIR, '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs, '--case', query], cwd='../', stdout=subprocess.PIPE)
         else:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--res-dir', RES_DIR, '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs,  query], cwd='../', stdout=subprocess.PIPE)
     else:
         if case:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--res-dir', RES_DIR, '--ticket', ticket, '--case', query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
+            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--case', query], cwd='../', stdout=subprocess.PIPE)
         else:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--res-dir', RES_DIR, '--ticket', ticket,  query], cwd='../', stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=sys.stderr)
-    '''
-
-    if len(langs) > 0:
-        if case:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs, '--case', query], cwd='../', stdout=subprocess.PIPE)
-        else:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--langs', langs,  query], cwd='../', stdout=subprocess.PIPE)
-    else:
-        if case:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4', '--case', query], cwd='../', stdout=subprocess.PIPE)
-        else:
-            p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', str(limit), '--context', '4',  query], cwd='../', stdout=subprocess.PIPE)
+            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4',  query], cwd='../', stdout=subprocess.PIPE)
 
 
 
@@ -109,6 +118,8 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
     langs = set()
     lang = '-'
 
+    outfs = {}
+
     tree = []
     for l in p.stdout:
         try:
@@ -116,7 +127,7 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
         except:
             pass
         tree.append(l)
-        #outf.write(l+'\n')
+
         if len(l)<1 or l.startswith('\n'):
             lang = 'unknown'
             if tree[0].startswith('# lang'):
@@ -126,30 +137,31 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
                     xx = open(res_file(ticket + '.langs'), 'w')
                     xx.write(json.dumps(list(langs)))
                     xx.close()
-                    
+                                
+            
+            if counts[lang]%10==0:
+                if lang not in outfs.keys():
+                    outfs[lang] = open(res_file(lang + '_' + ticket + '_' + str(round(counts[lang],-1)) + '.conllu'), 'a+t')
+                else:
+                    outfs[lang].close()
+                    outfs[lang] = open(res_file(lang + '_' + ticket + '_' + str(round(counts[lang],-1)) + '.conllu'), 'a+t')                    
             counts[lang] += 1
-            outf = open(res_file(lang + '_' + ticket + '_' + str(round(counts[lang],-1)) + '.conllu'), 'a+t')
             for tl in tree:
-                outf.write(tl)
-            outf.close()
+                outfs[lang].write(tl)
             tree = []
-    
 
+    for of in outfs.keys():
+        outfs[of].close()
+    
     outf = open(res_file(ticket+'.done'),'w')
     outf.close()                    
     
 @app.route('/do_query/<dbs>/<query>/<m>/<langs>/')
 def xxquery_process(dbs, query, m, langs):
 
-    inf = open('dbs.json','rt')
-    xdbs = json.load(inf)
-    inf.close()
+    xdbs = get_flat_dbs()
 
-    #query_py = 'cd ..;python3 query.py'
-    #cmd = query_py + ' -d "' + xdbs[dbs] + '" -m 0 --langs ' + langs + ' "' + query + '"'
-    #os.system(cmd + ' > ./api_gui/res/' + ticket + ' &')
     limit = 5000
-
     if len(langs) > 0:
         p = subprocess.Popen(['python3', 'query.py', '-d', xdbs[dbs], '-m', m, '--langs', langs, query], cwd='../', stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     else:
@@ -174,7 +186,121 @@ def send_js(path):
 
 @app.route("/")
 def mnf():
-    return render_template("qx.html")
+    inf = open('config.json', 'r')
+    xx = json.load(inf)
+    inf.close()
+
+    approot = xx['approot']
+
+    return render_template("qx_hack.html", approot=approot)
+
+
+@app.route('/get_dbs_json')
+def gdsb():
+    inf = open('dbs.json','rt')
+    dbs = json.load(inf)
+    inf.close()
+
+
+
+    xpx = []
+    dd = defaultdict(dict)
+    for k in dbs.keys():
+        init_path = dbs[k]#'/media/mjluot/b4ce4977-6aa1-44b2-87c1-bc149e48af35/dx/ndep_search/dep_search/PBs/'
+        if not init_path.endswith('/'):
+            init_path += '/'
+        dx = dd
+        root = k
+            
+        if path.exists(os.path.join(init_path, "db_config.json")):
+            dd[root] = init_path
+        else:
+            #dd[root] = {}
+            for dirname, dirnames, filenames in os.walk(init_path):
+                for subdirname in dirnames:
+                    if os.path.isdir(os.path.join(dirname, subdirname)):
+                        #print(os.path.join(dirname, subdirname))
+                        dx = dd
+                        for xx in os.path.join(dirname, subdirname).split('/')[len(init_path.split('/'))-2:-1]:
+                            dx = dx[xx]
+                        if path.exists(os.path.join(dirname, subdirname, "db_config.json")):
+                            dx[os.path.join(dirname, subdirname).split('/')[-1]] = os.path.join(dirname, subdirname)
+                        else:
+                            if not isinstance(os.path.join(dirname, subdirname).split('/')[-1], str):
+                                dx[os.path.join(dirname, subdirname).split('/')[-1]] = {}
+
+        xxm = {}
+
+    return jsonify(get_node_with_kids(dd, '')) 
+
+
+def get_flat_dbs():
+
+
+    inf = open('dbs.json','rt')
+    dbs = json.load(inf)
+    inf.close()
+
+    flat_dict = {}
+
+    xpx = []
+    dd = defaultdict(dict)
+    for k in dbs.keys():
+        init_path = dbs[k]
+        if not init_path.endswith('/'):
+            init_path += '/'
+        dx = dd
+        root = k
+            
+        if path.exists(os.path.join(init_path, "db_config.json")):
+            dd[root] = init_path
+        else:
+            dd[root] = {}
+            for dirname, dirnames, filenames in os.walk(init_path):
+                for subdirname in dirnames:
+                    if os.path.isdir(os.path.join(dirname, subdirname)):
+                        #print(os.path.join(dirname, subdirname))
+                        dx = dd
+                        for xx in os.path.join(dirname, subdirname).split('/')[len(init_path.split('/'))-2:-1]:
+                            dx = dx[xx]
+                        if path.exists(os.path.join(dirname, subdirname, "db_config.json")):
+                            dx[os.path.join(dirname, subdirname).split('/')[-1]] = os.path.join(dirname, subdirname)
+                            flat_dict[os.path.join(dirname, subdirname).split('/')[-1]] = os.path.join(dirname, subdirname)
+                        else:
+                            if not isinstance(os.path.join(dirname, subdirname).split('/')[-1], str):
+                                dx[os.path.join(dirname, subdirname).split('/')[-1]] = {}
+
+        xxm = {}
+
+
+    return flat_dict
+
+
+
+
+def get_node_with_kids(dd, xid):
+    import natsort
+    tr = []
+    for ixx, kid in enumerate(natsort.natsorted(dd.keys())):
+        #is end node?
+        if isinstance(dd[kid], str):
+            if len(xid) > 0:
+                tr.append({'id': str(kid), 'text': str(kid), 'children':[], "state": {"opened" : True}})
+            else:
+                tr.append({'id': str(kid), 'text': str(kid), 'children':[], "state": {"opened" : True}})
+        else:
+            if len(xid) > 0:
+                tr.append({'id': str(kid), 'text': str(kid), 'children':get_node_with_kids(dd[kid], xid + '-' + str(ixx)), "state": {"opened" : False}})
+            else:
+                tr.append({'id': str(kid), 'text': str(kid), 'children':get_node_with_kids(dd[kid], xid + '-' + str(ixx)), "state": {"opened" : False}})
+    return tr
+    
+
+
+    return json.dumps(xx)
+
+
+
 
 
 @app.route("/get_dbs/")
@@ -183,18 +309,14 @@ def gdb():
     dbs = json.load(inf)
     inf.close()
     xx = []
-    print ('DB', dbs)
     for k in dbs:
         xx.append(k)
-    print (json.dumps(xx))
     return json.dumps(xx)
 
 @app.route("/get_langs/<db>")
 def dbl(db):
 
-    inf = open('dbs.json','rt')
-    dbs = json.load(inf)
-    inf.close()
+    dbs = get_flat_dbs()
     
     inf = open(dbs[db] + '/langs', 'rt')
     
@@ -205,8 +327,29 @@ def dbl(db):
     inf.close()
     xx.sort()
 
-    print (xx)
     return jsonify(xx)
+
+@app.route("/get_langs_post/", methods=['POST'])
+def dbdl():
+
+    dbs = request.form.getlist('data[]')
+    return jsonify(get_db_langs(dbs))
+    
+def get_db_langs(dbs):
+    fdbs = get_flat_dbs()
+    xx = []
+    for db in dbs:
+        inf = open(fdbs[db] + '/langs', 'rt')
+        for ln in inf:
+            xx.append(ln.strip())
+
+        inf.close()
+        xx.sort()
+
+    return xx
+
+
+
 
 
 def file_generator_lang(ticket, lang):
@@ -325,7 +468,6 @@ def hello_q(dbs, query, langs, limit):
 @app.route("/start_query/<dbs>/<query>/<limit>/<case>")
 def hello_qc(dbs, query, limit, case):
 
-    print ('XXXX')
     langs = ''
 
     case = case=='true'
@@ -338,7 +480,6 @@ def hello_qc(dbs, query, limit, case):
 def hello_qcc(dbs, query, langs, limit, case):
 
     case = case=='true'
-    print ('WBIN!')
 
     ticket = unique_id()
     p = Process(target=query_process, args=(dbs,query, langs, ticket, limit, case))
@@ -379,6 +520,13 @@ def get_res_count(ticket):
         if number > res[lang]:
             res[lang] = number
 
+    tr = []
+    for k in res.keys():
+        if res[k] < 1:
+            tr.append(k)
+    for k in tr:
+        del res[k]
+
     return jsonify(res)
 
 
@@ -409,11 +557,12 @@ def gxet_res_count(ticket):
 def get_langs(ticket):
 
     langs = set()
-
-    xx = open(res_file(ticket + '.langs'), 'r')
-    langs = json.load(xx)
-    xx.close()
-
+    try:
+        xx = open(res_file(ticket + '.langs'), 'r')
+        langs = json.load(xx)
+        xx.close()
+    except:
+        langs = []
     return jsonify(list(langs))
 
 @app.route("/get_tree_count/<ticket>/<lang>/")
@@ -466,24 +615,24 @@ def get_xtrees(ticket, lang, start, end):
     '''      
     if lang == 'undefined':
         #
-        inf = open(res_file(ticket+'.json'), 'r')
-        db = json.load(inf)
-        print (db)
-        db = db["dbs"].split(',')[0]
-        inf.close()
+        try:
+            inf = open(res_file(ticket+'.json'), 'r')
+            db = json.load(inf)
+            db = db["dbs"]
+            inf.close()
 
-        inf = open('dbs.json','rt')
-        dbs = json.load(inf)
-        inf.close()
+            dbs = get_flat_dbs()
 
-        inf = open(dbs[db] + '/langs', 'rt')
+            for dib in db.split(','):
+                inf = open(dbs[dib] + '/langs', 'rt')
+                xx = []
+                for ln in inf:
+                    xx.append(ln.strip())
 
-        xx = []
-        for ln in inf:
-            xx.append(ln.strip())
-
-        inf.close()
-        return render_template('query.html', start=start, end=end, lang=xx[0], idx=ticket, approot=approot)
+                inf.close()
+            return render_template('query.html', start=start, end=end, lang=xx[0], idx=ticket, approot=approot)
+        except:
+            return render_template("qx_hack.html", approot=approot)
 
 
   

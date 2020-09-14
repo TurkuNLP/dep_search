@@ -1,16 +1,20 @@
 <html>
 <head>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 </head>
 <body>
-
-
+<script
+<script src="/static/dist/tree.min.js"></script>
 Query:<br>
 <input id="qrt" type="textarea" name="vehicle1" value="_ <nsubj _"><br>
 Result Limit:<br>
 <input id="limitfield" type="textarea" name="vehicle2" value="10000"><br>
 <input type="checkbox" id="xcasex" name="xcasex">Case Insensitive<br>
   <input id="sbtn" type="button" value="Submit">
+
+
+<div style="background-color:lightblue" class="container">
+DBs<br>
+</div>
 
 
 <div style="background-color:lightblue" id="dbs">
@@ -31,7 +35,14 @@ function prependChild(parentEle, newFirstChildEle) {
 }
 
 
+let tree = new Tree('.container', {url: '/get_dbs_json',});
+
+
+
 $( document ).ready(function() { 
+
+
+
 
         $.getJSON("./get_dbs/", function(data, status){
         //alert(data)

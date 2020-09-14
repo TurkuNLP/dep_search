@@ -1,3 +1,3 @@
 git submodule init
 git submodule update
-pip install -e .
+pip3 install -e .

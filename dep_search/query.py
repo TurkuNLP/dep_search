@@ -517,6 +517,8 @@ def get_query_mod(query_dir, search, case, set_id_db, database):
 def main_db_query(args):
 
     #The blob and id database
+    
+    sys.stderr.write(str(args))
     inf = open(args.database+'/db_config.json', 'rt')
     db_args = json.load(inf)
     inf.close()
