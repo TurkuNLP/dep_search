@@ -26,7 +26,7 @@ def get_flat_dbs():
             
         if os.path.exists(os.path.join(init_path, "db_config.json")):
             dd[root] = init_path
-        else:
+        elif not os.path.isfile(dbs[root]):
             dd[root] = {}
             for dirname, dirnames, filenames in os.walk(init_path):
                 for subdirname in dirnames:
@@ -88,7 +88,11 @@ dx = {}
 print ('!!', folders)
 for d in folders:
     print (d)
-    dx[d.split('/')[-2]] = d
+    if d.endswith('/'):
+        dx[d.split('/')[-2]] = d
+    else:
+        dx[d.split('/')[-1]] = d
+print ('dx', dx)
 outf = open('./api_gui/dbs.json','wt')
 json.dump(dx, outf)
 outf.close()
@@ -103,8 +107,11 @@ piece = '''-
 '''
 corpus_grp_str = ''
 for k in dd.keys():
-    corpus_grp_str += piece.format(k, ' '.join(dd[k].keys()))
-
+    try:
+        corpus_grp_str += piece.format(k, ' '.join(dd[k].keys()))
+    except:
+        pass
+        
 outf = open('./api_gui/webapi/corpus_groups.yaml','wt')
 outf.write(corpus_grp_str)
 outf.close()

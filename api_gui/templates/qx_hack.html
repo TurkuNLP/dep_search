@@ -1,0 +1,259 @@
+<html>
+<head>
+</head>
+
+<style>
+.truncate {
+  width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+  #container {
+    background-color: powderblue;
+    border: 2px solid black;
+    border-radius: 5px;
+    max-width: 50%;
+    padding-right: 20px;
+  }
+
+  #langs {
+    background-color: powderblue;
+    border: 2px solid black;
+    border-radius: 5px;
+    max-width: 50%;
+    padding-right: 20px;
+  }
+
+  #query {
+    background-color: powderblue;
+    border: 2px solid black;
+    border-radius: 5px;
+    max-width: 50%;
+    padding-left: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+  
+  input[type=button]{
+  background-color: royalblue; /* Green */
+  border: 1px solid black;
+  border-radius: 2px;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+input[type=button]:hover {
+  background-color: skyblue; /* Green */
+  color: white;
+}
+
+
+</style>
+
+
+
+<body>
+    <script
+  src="https://code.jquery.com/jquery-3.5.1.js"
+  integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
+  crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/themes/default/style.min.css" />
+<script src="{{ approot }}/static/dist/tree.min.js"></script>
+<h2>Query</h2>
+<div id='query'>
+<input id="qrt" type="textarea" name="vehicle1" value="_ <nsubj _"><br>
+Result Limit:<br>
+<input id="limitfield" type="textarea" name="vehicle2" value="10000"><br>
+<input type="checkbox" id="xcasex" name="xcasex">Case Insensitive<br>
+  <input id="sbtn" type="button" value="Submit">
+</div>
+<br><h2>Databases</h2>
+<div style="background-color:lightblue" id="container">
+<br>
+</div>
+
+
+
+
+<br>
+<br><h2>Available languages</h2>
+Selecting languages limit search to these, no selection means all languages are queried.
+<br>
+<div style="background-color:lightblue" id="langs">
+  <input type="checkbox" name="lang_all" value="all">all<br>
+</div>
+
+
+<script>
+var global_dbs = "";
+var tree = "";
+var approot = "{{ approot }}";
+    
+
+
+function prependChild(parentEle, newFirstChildEle) {
+    parentEle.insertBefore(newFirstChildEle, parentEle.firstChild)
+}
+
+
+
+function is_in_lang_list(lang){
+    var retval = false;
+    $('#langs').children().each(function(idx, itm){if (itm.value==lang){retval=true;};});
+    return retval;
+}
+
+
+$( document ).ready(function() { 
+
+    $.getJSON(approot + '/get_dbs_json', function(data) {
+        
+        tree = new Tree('#container', {
+        //data: [{ id: '-1', text: 'root', children: data , state: {disabled: true}}],
+        data: data,
+        loaded: function () {
+            console.log(this.selectedNodes);
+            console.log(this.values);
+            $('.treejs-switcher').click();
+
+        },
+        onChange: function () {
+            global_dbs = this.values;
+        }
+    });
+    });
+
+    
+    // Okay, when touched, update langs
+    $('#container').click(function() {
+        //alert(':M');
+        //Okay, lets update the langs
+        //Let's check which dbs are checked
+        var xx = global_dbs;
+        console.log(xx);
+        //wipe langs
+        $('#langs').html(' ')
+        //get relevant langs and update langs
+        
+        
+        $.post(approot +  "/get_langs_post/", {"data": xx}, function(data) {
+            lang_list = [];
+            for (var xitem in data){
+                if (($.inArray(data[xitem], lang_list) == -1) && !(is_in_lang_list(data[xitem]))) {
+                    $('#langs').append('<input type="checkbox" class="bln" name="ln_' + data[xitem] + '" value="' + data[xitem] +'">' + data[xitem] + '<br>');
+                }
+                lang_list.push(data[xitem]);
+            }
+	});
+        
+       
+    });
+
+    $('#sbtn').click(function(){
+
+        //create the url
+        //"/start_query/<dbs>/<query>/<langs>"
+
+        //query
+        var query = $('#qrt').val();
+        //langs
+        var xx = $( ".bln" ).map( function( index, element ) {if (element.checked) {return element.value;}}).get();
+        console.log(xx);
+        var langs = [];
+        for (var it in xx){
+            console.log(it);
+            langs.push(xx[it]);
+        }
+        console.log(langs);
+
+        //dbs
+        var xx = global_dbs;
+        console.log(xx);
+        var dbs = [];
+        for (var it in xx){
+            console.log(it);
+            dbs.push(xx[it]);
+        }
+        console.log(dbs);
+
+        lang_str = "";
+        for (lang in langs){
+            if (lang > 0){
+                lang_str = lang_str + ',';
+            }
+            lang_str = lang_str + langs[lang];
+        }
+        
+        db_str = "";
+        for (lang in dbs){
+            if (lang > 0){
+                db_str = db_str + ',';
+            }
+            db_str = db_str + dbs[lang];
+        }        
+
+        var limit = $('#limitfield').val();
+
+
+        var checkBox = document.getElementById("xcasex");
+
+
+        var casex = "false";
+        if (checkBox.checked){
+            casex = "true";
+        }
+
+        console.log(checkBox.checked);
+        var queryUrl;
+        if (lang_str) {
+            queryUrl = approot + '/start_query/'+db_str+'/'+ query + '/' + lang_str + '/' + limit + '/' + casex;
+        } else {
+            queryUrl = approot + '/start_query/'+db_str+'/'+ query + '/' + limit + '/' + casex;
+        }
+        console.log(queryUrl);
+
+
+
+
+
+        //launch
+        $.get(queryUrl, function(data, status){
+
+
+            //"/show/<ticket>/<lang>/<int:start>/<int:end>"
+            //document.body.append('<a href="/show/' + data + '/' + langs[0] + '/0/10' + '">' + query + '</a>');
+            //console.log(data);
+            var a = document.createElement('a');
+            var nn = query + '  ' + lang_str + '  ' + db_str;
+            if (nn.length > 50){ nn = nn.substr(1,50)}
+            var linkText = document.createTextNode(nn);
+            a.appendChild(linkText);
+            a.href = approot + '/show/' + data + '/' + langs[0] + '/0/10';
+            document.body.appendChild(a);
+            //$('#langs').insertAdjacentElement('afterend', a)
+            var a = document.createElement('br');
+            document.body.appendChild(a);
+            //$('#langs').insertAdjacentElement('afterend', a)
+            window.open(approot + '/show/' + data + '/' + langs[0] + '/0/10', '_blank');
+
+        });
+
+    });
+
+
+
+});
+
+
+
+
+
+</script>
+</body>
+
+</html>

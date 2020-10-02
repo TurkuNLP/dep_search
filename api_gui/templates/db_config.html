@@ -1,0 +1,56 @@
+ <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"> <html lang="en"> <head> <meta http-equiv="content-type" content="text/html; charset=utf-8"> <title>Login</title> </head> <body> 
+ 
+  <style>
+    .truncate {
+      width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+      .container {
+        background-color: powderblue;
+        border: 2px solid black;
+        border-radius: 5px;
+        max-width: 50%;
+        padding: 20px;
+      }
+
+</style>    
+
+
+ <h1>Remove Databases (Careful!)</h1>
+ 
+<div class="container" id='remove_dbs' style="overflow: scroll; max-height: 350px"> 
+{{ dbs | safe }} 
+</div>
+  
+<br><br>  
+
+ <h1>Index a new database</h1>
+
+<form action="{{approot}}/index_db" method="post" enctype="multipart/form-data" class="container">
+
+  <input type="file" id="file" name="file">
+  <br>
+  <input type="text" id="lang" name="lang">
+  <label for="lang">Language</label>  
+  <br>
+  <input type="text" id="name" name="name">
+  <label for="name">Name of the database</label>
+  
+  <br>
+  <input type="submit" value="Submit">
+</form>
+
+<br><br>
+
+ <h1>Change Password</h1>
+
+<form action="{{approot}}/change_pw" method="post" class="container">
+  <input type="password" id="pass" name="pass">
+  <br>
+  <input type="submit" value="Submit">
+</form>
+
+</body></html>

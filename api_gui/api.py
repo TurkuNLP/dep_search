@@ -3,7 +3,7 @@ import json
 from flask import Flask, jsonify, Markup
 import os
 import time
-from flask import render_template, send_from_directory
+from flask import render_template, send_from_directory, make_response, redirect
 from flask import Flask, Markup
 import flask
 import json
@@ -19,11 +19,14 @@ import os.path
 
 from kwic import kwic_gen
 from freqs import get_freqs 
-
+import time
 import os
 from collections import defaultdict
 from os import path
 from flask import Flask, request
+import hashlib
+from werkzeug.utils import secure_filename, escape
+import uuid
 dd = defaultdict(dict)
 
 
@@ -33,6 +36,11 @@ app = Flask(__name__)
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 RES_DIR = os.path.join(THIS_DIR, "res")
+
+
+def get_uuid():
+    uu = uuid.uuid4()
+    return str(uu)
 
 
 def res_file(basename):
@@ -72,27 +80,20 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
     xdb_string = []
     langs = langs.split(',')
     for x in dbs.split(','):
-        print ('*!*',x, len(langs), langs)
         if len(langs) > 0 and len(langs[0]) > 0:
             langs_in_db = get_db_langs([x])
             if len(set(langs).intersection(set(langs_in_db))) > 0:
-                print ("**")
                 xdb_string.append(xdbs[x])
         else:
-            print ('ebb')
             xdb_string.append(xdbs[x])
             
     db_string = ','.join(xdb_string)
-    print ('!!', db_string, xdb_string)
     if len(db_string) < 1:
         db_string = xdbs[dbs]
     
-    print (dbs)
-    print ('!!', db_string)
     os.system('python3 res_cleaner.py &')
     langs = ','.join(langs)
 
-    print (langs, db_string)
     if len(langs) > 0:
         if case:
             p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs, '--case', query], cwd='../', stdout=subprocess.PIPE)
@@ -155,6 +156,146 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
     
     outf = open(res_file(ticket+'.done'),'w')
     outf.close()                    
+
+def get_passhash(passw):
+    salt = 'erthya!!!4235'
+    return hashlib.sha256(salt.encode() + passw.encode()).hexdigest()
+
+@app.route('/login', methods=['POST'])
+def signin():
+    passw = request.form['pass']
+    passhash = get_passhash(passw)
+
+    inf = open('config.json', 'r')
+    xx = json.load(inf)
+    inf.close()
+    if xx['admin_pass'] == passhash or (xx['admin_pass'] == ''):
+        session_id = get_uuid()
+        outf = open('sessions', 'wt')
+        outf.write(session_id + '\t' + str(time.time() + 60*60*3))
+
+        res = make_response(redirect("/db_config"))
+        res.set_cookie("session_id", value=session_id)
+        return res
+    else:
+        return render_template('login.html')
+
+@app.route('/change_pw', methods=['POST'])
+def cshange_pw():
+
+    passw = request.form['pass']
+    passhash = get_passhash(passw)
+    
+    inf = open('config.json', 'r')
+    xx = json.load(inf)
+    inf.close()
+    
+    if check_creds(request):
+        xx['admin_pass'] = passhash
+        outf = open('config.json','wt')
+        outf.write(json.dumps(xx))
+        outf.close()
+        return render_template("db_config.html", approot=xx['approot'])
+    else:
+        return render_template("login.html", approot=xx['approot'])
+
+
+@app.route('/remove_db/<db_name>')
+def rmdb(db_name):
+
+    db_r = db_name
+    inf = open('config.json', 'r')
+    xx = json.load(inf)
+    inf.close()
+    
+    fd = get_flat_dbs()
+        
+    if check_creds(request):
+        os.system('rm -rf ' + fd[db_r])
+        os.system('cd ..; python3 docker_add_dbs.py')
+        return redirect("/db_config")
+    else:
+        return render_template("login.html", approot=xx['approot'])
+
+@app.route('/index_db', methods=['POST'])
+def chansge_pw():
+
+    inf = open('config.json', 'r')
+    xx = json.load(inf)
+    inf.close()
+    
+    db_name = request.form['name']
+    db_lang = request.form['lang']
+    
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    file.save(xx['db_folder'] + filename)    
+        
+    if check_creds(request):
+        outf = open('index_' + filename + '.sh','wt')
+        outf.write('cd ..; cat ' + xx['db_folder'] + filename + ' | python3 build_index.py -d ' + xx['db_folder'] + '/' + db_name + ' --lang ' + db_lang + ' 2>&1 > ' + xx['db_folder'] + filename + '.log\n')
+        outf.write('python3 docker_add_dbs.py\n')
+        outf.close()
+        os.system('chmod +x ' + 'index_' + filename + '.sh')
+        os.system('sh ' + 'index_' + filename + '.sh &')
+        #os.system('cd ..; cat ' + xx['db_folder'] + filename + ' | python3 build_index.py -d ' + xx['db_folder'] + '/' + db_name + ' --lang ' + db_lang + ' 1&2> ' + xx['db_folder'] + filename + '.log')
+        #os.system('cd ..; python3 docker_add_dbs.py')
+        
+    return redirect("/check_index/" + filename + '.log')
+
+@app.route('/check_index/<filename>')
+def rrt(filename):
+    if check_creds(request):
+        inf = open('config.json', 'r')
+        xx = json.load(inf)
+        inf.close()
+        inf = open(xx['db_folder'] + filename,'rt')
+        ff = inf.read()
+        ff = ff.replace('\n','<br>')
+        inf.close()
+    return render_template('check_log.html', log=ff)
+
+@app.route('/db_config')
+def db_config():
+
+    inf = open('config.json', 'r')
+    xx = json.load(inf)
+    inf.close() 
+
+    xxx = ''
+    dd = get_flat_dbs()
+    for k in dd.keys():
+        #
+        #xxx += '<a href=' + xx['approot'] + '/remove_db/' + k + '>Remove ' + k + '</a><br>'
+        xxx += '<input type="button" value="Remove ' + k + '" onclick="if(window.confirm(\'Sure?\')){window.location = \'' + xx['approot'] + '/remove_db/' + k + '\';}" /><br>'
+
+
+    if check_creds(request):
+        return render_template("db_config.html", approot=xx['approot'], dbs=xxx)
+    return render_template('login.html', approot=xx['approot'])
+
+
+def check_creds(req):
+    
+    try:
+        inf = open('config.json', 'r')
+        xx = json.load(inf)
+        inf.close()
+
+        session_id = req.cookies.get('session_id')
+        
+        inf = open('sessions','rt')
+        xln = inf.readline()
+        inf.close()
+        right_sess_id, xtime = xln.strip().split('\t')
+        print (session_id, right_sess_id, float(xtime) > time.time())
+        if session_id == right_sess_id and time.time() < float(xtime) and xx['allow_remote_admin']:
+            return True
+        else:
+            return False
+    except:
+        return False
+
     
 @app.route('/do_query/<dbs>/<query>/<m>/<langs>/')
 def xxquery_process(dbs, query, m, langs):
@@ -214,8 +355,8 @@ def gdsb():
             
         if path.exists(os.path.join(init_path, "db_config.json")):
             dd[root] = init_path
-        else:
-            #dd[root] = {}
+        elif not os.path.isfile(dbs[root]): 
+            dd[root] = {}
             for dirname, dirnames, filenames in os.walk(init_path):
                 for subdirname in dirnames:
                     if os.path.isdir(os.path.join(dirname, subdirname)):
@@ -246,6 +387,7 @@ def get_flat_dbs():
     xpx = []
     dd = defaultdict(dict)
     for k in dbs.keys():
+        print ('key', k)
         init_path = dbs[k]
         if not init_path.endswith('/'):
             init_path += '/'
@@ -254,7 +396,10 @@ def get_flat_dbs():
             
         if path.exists(os.path.join(init_path, "db_config.json")):
             dd[root] = init_path
-        else:
+            flat_dict[root] = init_path
+            print ('got!')
+        elif not os.path.isfile(dbs[root]):
+            print ('>>>')
             dd[root] = {}
             for dirname, dirnames, filenames in os.walk(init_path):
                 for subdirname in dirnames:
@@ -337,6 +482,7 @@ def dbdl():
     
 def get_db_langs(dbs):
     fdbs = get_flat_dbs()
+    print (fdbs)
     xx = []
     for db in dbs:
         inf = open(fdbs[db] + '/langs', 'rt')

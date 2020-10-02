@@ -35,7 +35,53 @@
 	<!-- end annotation visualization stuff -->
 
 
+<style>
+button {
+  background-color: royalblue; /* Green */
+  border: 1px solid black;
+  border-radius: 2px;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+button:hover {
+  background-color: skyblue; /* Green */
+  color: white;
+}
+    </style>
+
+<script>
+$(document).keydown(function(e) {
+    console.log(e.keyCode);
+    if(e.keyCode==37){$("#bbtn").click()}
+    if(e.keyCode==39){$("#fwbtn").click()}
+});
+</script>
+
+
 </head>
+
+<style>
+button {
+  background-color: royalblue; /* Green */
+  border: 1px solid black;
+  border-radius: 2px;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+button:hover {
+  background-color: #4CAF50; /* Green */
+  color: white;
+}
+    </style>
+
 
 <body>
 
@@ -99,20 +145,20 @@
 
 <div id="res_count">
 </div>
-<a href="{{ approot }}/get_trees/{{ idx }}/{{ lang }}/{{ start }}/{{ end }}">See this page as text</a><br>
-<a href="{{ approot }}/download/{{ idx }}">Download All Results</a><br>
-<a href="{{ approot }}/download/{{ idx }}/{{ lang }}">Download {{ lang }} Results</a><br>
-<br>
-<a href="{{ approot }}/kwic_download/{{ idx }}">Download All Results as kwic</a><br>
-<a href="{{ approot }}/kwic_download/{{ idx }}/{{ lang }}">Download {{ lang }} Results as kwic</a><br>
-<br>
-<a href="{{ approot }}/freqs/{{ idx }}">All Frequencies</a><br>
-<a href="{{ approot }}/freqs/{{ idx }}/{{ lang }}">{{ lang }} Frequencies</a><br>
 
-
-
-
-
+<table>
+    <tbody>
+    <tr>
+    <td style="padding:25px;"><a href="{{ approot }}/get_trees/{{ idx }}/{{ lang }}/{{ start }}/{{ end }}">See this page as text</a><br>
+        <a href="{{ approot }}/download/{{ idx }}">Download All Results</a><br>
+        <a href="{{ approot }}/download/{{ idx }}/{{ lang }}">Download {{ lang }} Results</a></td>
+    <td style="padding:25px;"><a href="{{ approot }}/kwic_download/{{ idx }}">Download All Results as kwic</a><br>
+        <a href="{{ approot }}/kwic_download/{{ idx }}/{{ lang }}">Download {{ lang }} Results as kwic</a></td>
+    <td style="padding:25px;"><a href="{{ approot }}/freqs/{{ idx }}">All Frequencies</a><br>
+        <a href="{{ approot }}/freqs/{{ idx }}/{{ lang }}">{{ lang }} Frequencies</a></td>
+    </tr>
+    </tbody>
+    </table>
 </div>
 
 
@@ -125,7 +171,8 @@
 
     <input id="pgnum" type="text" name="FirstName" style="display: inline-block; white-space: nowrap; width: 50px"> / <div id="pages" style="display: inline-block; white-space: nowrap;">120</div>
 
-    <button id="gobtn" type="button">Go</button>   <button id="bbtn" type="button"><</button>   <button id="fwbtn" type="button">></button> 
+    <button id="gobtn" type="button">Go</button>   <button id="bbtn" type="button"><</button>   <button id="fwbtn" type="button">></button> Arrow keys also work for navigation
+
 
 </div>
 
