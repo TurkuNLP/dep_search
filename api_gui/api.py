@@ -195,7 +195,7 @@ def cshange_pw():
         outf = open('config.json','wt')
         outf.write(json.dumps(xx))
         outf.close()
-        return render_template("db_config.html", approot=xx['approot'])
+        return redirect(xx['approot'] + "/db_config")
     else:
         return render_template("login.html", approot=xx['approot'])
 
@@ -209,11 +209,11 @@ def rmdb(db_name):
     inf.close()
     
     fd = get_flat_dbs()
-        
+
     if check_creds(request):
         os.system('rm -rf ' + fd[db_r])
         os.system('cd ..; python3 docker_add_dbs.py')
-        return redirect("/db_config")
+        return redirect(xx['approot'] + "/db_config")
     else:
         return render_template("login.html", approot=xx['approot'])
 
@@ -230,7 +230,7 @@ def chansge_pw():
     file = request.files['file']
     filename = secure_filename(file.filename)
     file.save(xx['db_folder'] + filename)    
-        
+
     if check_creds(request):
         outf = open('index_' + filename + '.sh','wt')
         outf.write('cd ..; cat ' + xx['db_folder'] + filename + ' | python3 build_index.py -d ' + xx['db_folder'] + '/' + db_name + ' --lang ' + db_lang + ' 2>&1 > ' + xx['db_folder'] + filename + '.log\n')
@@ -241,7 +241,8 @@ def chansge_pw():
         #os.system('cd ..; cat ' + xx['db_folder'] + filename + ' | python3 build_index.py -d ' + xx['db_folder'] + '/' + db_name + ' --lang ' + db_lang + ' 1&2> ' + xx['db_folder'] + filename + '.log')
         #os.system('cd ..; python3 docker_add_dbs.py')
         
-    return redirect("/check_index/" + filename + '.log')
+    return redirect(xx['approot'] + "/check_index/" + filename + '.log')
+
 
 @app.route('/check_index/<filename>')
 def rrt(filename):
@@ -343,7 +344,7 @@ def gdsb():
     inf.close()
 
 
-
+    mapdict = {}
     xpx = []
     dd = defaultdict(dict)
     for k in dbs.keys():
@@ -352,11 +353,12 @@ def gdsb():
             init_path += '/'
         dx = dd
         root = k
-            
+        mapdict[dbs[k].rstrip('/').split('/')[-1]] = k
         if path.exists(os.path.join(init_path, "db_config.json")):
             dd[root] = init_path
         elif not os.path.isfile(dbs[root]): 
-            dd[root] = {}
+            #dd[root] = {}
+
             for dirname, dirnames, filenames in os.walk(init_path):
                 for subdirname in dirnames:
                     if os.path.isdir(os.path.join(dirname, subdirname)):
@@ -371,8 +373,15 @@ def gdsb():
                                 dx[os.path.join(dirname, subdirname).split('/')[-1]] = {}
 
         xxm = {}
+        ff = {}
+        for k in dd:
+            #
+            if k in mapdict.keys():
+                ff[mapdict[k]] = dd[k]
+            else:
+                ff[k] = dd[k]
 
-    return jsonify(get_node_with_kids(dd, '')) 
+    return jsonify(get_node_with_kids(ff, '')) 
 
 
 def get_flat_dbs():
