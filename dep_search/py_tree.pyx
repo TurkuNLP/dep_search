@@ -57,12 +57,14 @@ cdef class Py_Tree:
         self.comp_dict = comp_dict
 
     def get_comp_dict(self):
+        a = self.comp_dict
         return self.comp_dict
 
     def deserialize(self, char *binary_blob):
         self.thisptr.deserialize(<void *>binary_blob)
         #print self.thisptr.zipped_tree_text_length
 
+    #here is the problem somehow
     def serialize_from_conllu(self, lines, comments, db_store):
         #this we need to save
         tree_data={"comments":comments,
@@ -156,6 +158,15 @@ cdef class Py_Tree:
                         set_id_d = db_store.get_id_for(u"d_anyrel")
                         #set_id_d=set_dict.setdefault(u"d_anyrel",len(set_dict))
                         arrays.setdefault(set_id_d,set()).add((dep,gov))
+
+        if len(lines) == 1:
+            set_id_d = db_store.get_id_for(u"d_anyrel")
+            #set_id_d=set_dict.setdefault(u"d_anyrel",len(set_dict))
+            arrays.setdefault(set_id_d,set()).add((0,0))
+
+            set_id_g = db_store.get_id_for(u"g_anyrel")
+            #set_id_g=set_dict.setdefault(u"g_anyrel",len(set_dict))
+            arrays.setdefault(set_id_g,set()).add((0,0))
 
 
 
