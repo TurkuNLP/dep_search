@@ -583,7 +583,6 @@ def main_db_query(args):
     else:
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
 
-    print (rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, solr_or_groups )
     total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db, comp_dict)
 
 

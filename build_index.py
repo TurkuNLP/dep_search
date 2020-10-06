@@ -282,7 +282,7 @@ if __name__=="__main__":
 
 
 
-            if (counter+1)%100 == 0:
+            if (counter)%100 == 0:
 
                 print (counter+1,',',datetime.now()-start_time, ',', getCurrentMemoryUsage()/1000.0, 'MB')
                 #print (mean(f_db_times))
@@ -346,11 +346,13 @@ if __name__=="__main__":
             else:
                 self_idx += 1
                 start = time.time()
+                #
                 solr_idx.add_to_idx_with_id(comments, sent, self_idx)
                 end = time.time()
                 f_db_times.append(end-start)
 
                 start = time.time()
+                #Blob
                 db.store_blob(blob, self_idx)
                 end = time.time()
                 b_db_times.append(end-start)
@@ -359,6 +361,10 @@ if __name__=="__main__":
 
 
         print ("Average tree length:", lengths/float(counter))
+        
+        set_id_db.close()
+        set_id_db.finish_indexing()
+        
         db.close()
         db.finish_indexing()
         #http://localhost:8983/solr/dep_search2/update?commit=true
