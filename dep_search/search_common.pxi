@@ -405,8 +405,8 @@ cdef class Search:  # base class for all searches
         #print ('!!!', self.blob)
         has_sets = self.fill_from_blob(<char*>blob)
 
-        if has_sets==1:
-            return set()
+        #if has_sets==1:
+        #    return set()
         self.initialize()
         result=self.exec_search()
         #print (result)

@@ -159,18 +159,6 @@ cdef class Py_Tree:
                         #set_id_d=set_dict.setdefault(u"d_anyrel",len(set_dict))
                         arrays.setdefault(set_id_d,set()).add((dep,gov))
 
-        if len(lines) == 1:
-            set_id_d = db_store.get_id_for(u"d_anyrel")
-            #set_id_d=set_dict.setdefault(u"d_anyrel",len(set_dict))
-            arrays.setdefault(set_id_d,set()).add((0,0))
-
-            set_id_g = db_store.get_id_for(u"g_anyrel")
-            #set_id_g=set_dict.setdefault(u"g_anyrel",len(set_dict))
-            arrays.setdefault(set_id_g,set()).add((0,0))
-
-
-
-
         #Produces the packed map data
         map_lengths=[]
         map_data=b""
