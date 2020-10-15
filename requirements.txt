@@ -10,3 +10,4 @@ pysolr
 ply
 flask
 natsort
+lz4

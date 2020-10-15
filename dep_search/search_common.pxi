@@ -5,7 +5,8 @@ from libc.stdlib cimport malloc
 from libc.stdint cimport uint32_t, uint16_t
 import sys
 from collections import defaultdict
-from dep_search.dict_lzw import compress, decompress
+
+import lz4.frame
 
 cdef extern from "tset.h" namespace "tset":
     cdef cppclass TSet:
@@ -492,15 +493,10 @@ cdef class Search:  # base class for all searches
     def get_tree_comms(self, comp_dict):
         #print ()
         cdef char * tree_text_data=self.tree.zipped_tree_text
-
-        #print ('zzz',self.blob)
-        #print (self.tree.zipped_tree_text_length)
-        #print (tree_text_data)
-
-
-        result = [l for l in decompress(tree_text_data[:self.tree.zipped_tree_text_length], comp_dict).decode('utf8').split(u'\n') if l.startswith(u'#')]
+        #result = tree_text_data[:self.tree.zipped_tree_text_length]
+        result = [l for l in lz4.frame.decompress(tree_text_data[:self.tree.zipped_tree_text_length]).decode('utf8').split(u'\n') if l.startswith(u'#')]
         return '\n'.join(result)
-
+        #return result
 
     def get_tree_text(self, comp_dict):
         cdef char * tree_text_data=self.tree.zipped_tree_text
@@ -508,9 +504,10 @@ cdef class Search:  # base class for all searches
         #print ('ebens', self.blob)
         #print (self.tree.zipped_tree_text_length)
         #print (tree_text_data)
-
-        result = [l for l in decompress(tree_text_data[:self.tree.zipped_tree_text_length], comp_dict).decode('utf8').split(u'\n') if not l.startswith(u'#')]
+        #result = tree_text_data[:self.tree.zipped_tree_text_length]
+        result = [l for l in lz4.frame.decompress(tree_text_data[:self.tree.zipped_tree_text_length]).decode('utf8').split(u'\n') if not l.startswith(u'#')]
         return '\n'.join(result)
+        #return result
 
 
 

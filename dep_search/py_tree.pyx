@@ -8,8 +8,7 @@ import zlib
 #import setlib.pytset as pytset
 from setlib.pytset cimport PyTSet, PyTSetArray
 from libcpp cimport bool
-from dep_search.dict_lzw import compress, decompress
-
+from lz4.frame import compress, decompress
 
 ID,FORM,LEMMA,UPOS,XPOS,FEAT,HEAD,DEPREL,DEPS,MISC=range(10)
 
@@ -73,8 +72,7 @@ cdef class Py_Tree:
                    "misc":list(l[MISC] for l in lines)}
 
         tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
-        tree_data_gz, cd = compress(tree_text.encode('utf8'), self.comp_dict)
-        self.comp_dict = cd
+        tree_data_gz = compress(tree_text.encode('utf8'))
         
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers
@@ -238,8 +236,7 @@ cdef class Py_Tree:
         #I know, will fix
         tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
         #print tree_text
-        tree_data_gz, cd = compress(tree_text.encode('utf8'), self.comp_dict)
-        self.comp_dict = cd #json.dumps(tree_data)#json.dumps(tree_data)#zlib.compress(json.dumps(tree_data))
+        tree_data_gz = compress(tree_text.encode('utf8'))
         
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers
@@ -347,8 +344,7 @@ cdef class Py_Tree:
         #print lines
         #I know, will fix
         tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
-        tree_data_gz, cd = compress(tree_text.encode('utf8'), self.comp_dict)
-        self.comp_dict = cd
+        tree_data_gz = compress(tree_text.encode('utf8'))
 
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers
