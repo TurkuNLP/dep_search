@@ -1,1 +1,1 @@
-{"approot": "", "allow_unlimited_limit": false, "max_result_limit": 50000, "allow_remote_admin": true, "db_folder": "/var/dbs/", "admin_pass": "e69501f18c296ef36723bfdc0d44af9d127f93971157573f3acb5c6f61fe3b34"}
+{"approot": "/ds_demo", "allow_unlimited_limit": false, "max_result_limit": 50000, "allow_remote_admin": true, "db_folder": "/var/dbs/", "admin_pass": "e69501f18c296ef36723bfdc0d44af9d127f93971157573f3acb5c6f61fe3b34"}

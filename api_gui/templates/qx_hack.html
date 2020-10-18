@@ -68,7 +68,7 @@ input[type=button]:hover {
 <div id='query'>
 <input id="qrt" type="textarea" name="vehicle1" value="_ <nsubj _"><br>
 Result Limit:<br>
-<input id="limitfield" type="textarea" name="vehicle2" value="10000"><br>
+<input id="limitfield" type="textarea" name="vehicle2" value="100"><br>
 <input type="checkbox" id="xcasex" name="xcasex">Case Insensitive<br>
   <input id="sbtn" type="button" value="Submit">
 </div>
@@ -77,8 +77,6 @@ Query Language is documented <a href="https://bionlp.utu.fi/searchexpressions-ne
 <div style="background-color:lightblue" id="container">
 <br>
 </div>
-
-
 
 
 <br>
@@ -223,7 +221,7 @@ $( document ).ready(function() {
 
 
         //launch
-        $.get(queryUrl, function(data, status){
+        $.post(approot + '/start_query/', { 'dbs': db_str, 'query': query, 'langs': lang_str, 'limit': limit, 'case': casex }, function(data, status){
 
 
             //"/show/<ticket>/<lang>/<int:start>/<int:end>"

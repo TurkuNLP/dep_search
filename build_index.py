@@ -233,7 +233,8 @@ if __name__=="__main__":
     try:
         for counter,(sent,comments) in enumerate(src_data):
 
-            #import pdb;pdb.set_trace()
+
+
             if len(sent)>sent_limit:
                 continue #Skip too long sentences
             if max(len(cols[FORM]) for cols in sent)>50 or max(len(cols[LEMMA]) for cols in sent)>50:
@@ -317,6 +318,8 @@ if __name__=="__main__":
                     pickle.dump(comp_dict, outf)
                     outf.close()
 
+
+
             s.deserialize(blob)
             lengths+=len(sent)
             counter+=1
@@ -324,6 +327,12 @@ if __name__=="__main__":
             arr_cnt = struct.unpack('=H', blob[4:6])
             set_indexes = struct.unpack('=' + str(set_cnt[0]) + 'I', blob[6:6+set_cnt[0]*4])
             arr_indexes = struct.unpack('=' + str(arr_cnt[0]) + 'I', blob[6+set_cnt[0]*4:6+set_cnt[0]*4+arr_cnt[0]*4])
+
+            if len(sent) == 1:
+                print (":)")
+                print (set_cnt, arr_cnt, set_indexes, arr_indexes)
+
+
             setarr_count.update(set_indexes + arr_indexes)
             try:
                 doc_url=get_doc_url(comments)
@@ -369,6 +378,9 @@ if __name__=="__main__":
         db.finish_indexing()
         #http://localhost:8983/solr/dep_search2/update?commit=true
     except KeyboardInterrupt:
+        set_id_db.close()
+        set_id_db.finish_indexing()    
+    
         db.close()
         db.finish_indexing()        
 

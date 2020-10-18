@@ -1,20 +1,20 @@
 import glob
-
+import os
 
 def main():
 
     pairs = []
-    for f in glob.glob('./uds/UD_*'):
+    for f in glob.glob('../uds/UD_*'):
+        #try:
+        lang = ('_'.join(f.split('-')[0].split('_')[1:]))
+        idx = (f.split('/')[-1])
         try:
-            #print (f)
-            #print (f.split('_')[1].split('-')[0])
-            #print (glob.glob(f+'/*train.conllu')[0])
-            pairs.append((f.split('_')[1].split('-')[0], glob.glob(f+'/*train.conllu')[0]))
+            os.mkdir('../xud_dbs/' + idx)
         except:pass
-
-    for l, f in pairs:
-        #
-        print ('cat ' + f + ' | python3 build_index.py -d ./ud_dbs/' + f.split('/')[-1].split('.')[0] + ' --lang ' + l)
-
+        files = glob.glob(f + '/*conllu')
+        
+        for ff in files:
+            #
+            print ('cat ' + ff + ' | python3 build_index.py -d ../xud_dbs/' + idx + '/' + ff.split('.')[-2].split('/')[-1] +  ' --lang ' + lang)
 
 main()

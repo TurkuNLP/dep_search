@@ -135,8 +135,6 @@ class DB(BaseDB):
                     self.transaction_count = 0
 
             else:
-                #print ('!!', self.name, self.foldername)
-                #self.txn.put(('tag_' + item).encode('utf8'), str(self.next_free_tag_id).encode('utf8'))
                 with self.env.begin() as txn:
                     txn.put(('tag_' + item).encode('utf8'), struct.pack("I", self.next_free_tag_id))
 

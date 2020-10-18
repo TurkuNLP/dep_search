@@ -310,7 +310,7 @@ def get_url(comments):
     return None
 
 
-def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict):
+def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang):
 
     #init the dbs
     q_obj.set_db(set_id_db)
@@ -359,9 +359,17 @@ def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict):
                 its_a_hit = False
 
                 try:
-                    print ('# lang:', fdb.get_lang(idx))
+                    lang = fdb.get_lang(idx)
                 except:
-                    pass
+                    lang = 'unknown'
+                    
+                if res_per_lang[lang] > max_hits:
+                    fdb.kill_threads()
+                    break
+                res_per_lang[lang] += 1
+                
+                print ('# lang:', lang)
+                    
                 try:
                     print ('# doc:', fdb.get_url(idx))
                 except:
@@ -423,6 +431,7 @@ def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict):
     #print ('cn', counter)
     return counter
 
+from collections import defaultdict
 
 def main(argv):
     global query_obj
@@ -446,13 +455,17 @@ def main(argv):
 
     args = parser.parse_args(argv[1:])
     rcnt = 0
+    
+    res_per_lang = defaultdict(int)
+    
+    mod = None
     if '*' in args.database:
         for db in glob.glob(args.database):
             if rcnt > args.max:
                 continue        
             xargs = copy.copy(args)
             xargs.database = db
-            rcnt += main_db_query(xargs)
+            xx, mod = main_db_query(xargs, res_per_lang, mod=mod)
             if rcnt >= args.max:
                 continue            
     elif ',' in args.database:
@@ -461,12 +474,29 @@ def main(argv):
                 continue        
             xargs = copy.copy(args)
             xargs.database = db
-            rcnt += main_db_query(xargs)
+            langs = get_db_langs(db)
+            
+            langs_left = False
+            for l in langs:
+                if res_per_lang[l] < args.max:
+                    langs_left = True
+            if langs_left:
+                xx, mod = main_db_query(xargs, res_per_lang, mod=mod)
 
     else:
-        rcnt = main_db_query(args)
+        rcnt, _ = main_db_query(args, res_per_lang)
     print ("Total number of hits:",rcnt,file=sys.stderr)
     sys.exit()
+
+def get_db_langs(db_path):
+
+    ing = open(os.path.join(db_path, 'langs'), 'rt')
+    langs = set()
+    for l in ing:
+        langs.add(l.strip())
+    ing.close()
+    
+    return list(langs)
 
 
 def get_query_mod(query_dir, search, case, set_id_db, database):
@@ -511,10 +541,11 @@ def get_query_mod(query_dir, search, case, set_id_db, database):
             #os.rename(temp_file_name, query_folder + temp_file_name)
             #os.rename(temp_file_name[:-4] + '.cpp', query_folder + temp_file_name[:-4] + '.cpp')
             #os.rename(temp_file_name[:-4] + '.so', query_folder + temp_file_name[:-4] + '.so')
+    
     return mod
 
 
-def main_db_query(args):
+def main_db_query(args, res_per_lang, mod=None):
 
     #The blob and id database
     
@@ -535,13 +566,14 @@ def main_db_query(args):
     if args.output is not None:
         sys.stdout = open(args.output, 'w')
 
-    mod = get_query_mod(
-        args.query_dir,
-        args.search,
-        args.case,
-        set_id_db,
-        args.database
-    )
+    if mod is None:
+        mod = get_query_mod(
+            args.query_dir,
+            args.search,
+            args.case,
+            set_id_db,
+            args.database
+        )
     query_obj = mod.GeneratedSearch()
 
     total_hits=0
@@ -583,7 +615,7 @@ def main_db_query(args):
     else:
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
 
-    total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db, comp_dict)
+    total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang)
 
 
 
@@ -595,4 +627,4 @@ def main_db_query(args):
             os.remove(query_folder + temp_file_name[:-4] + '.so')
         except:
             pass
-    return total_hits
+    return total_hits, mod

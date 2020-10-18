@@ -109,16 +109,16 @@ int Tree::print_sets(void **set_pointers, unsigned char *set_types, unsigned int
 
 int Tree::fill_sets(void **set_pointers, uint32_t *indices, unsigned char *set_types, unsigned char *optional, unsigned int count) {
     //set_pos -> index into set_pointers etc, runs in range [0,count)
-    ///std::cout << "Inside the fill_sets method!\n";
+    //std::cout << "Inside the fill_sets method!\n";
     for (int set_pos=0; set_pos<count; set_pos++) {
        // std::cout << "    main loop: " << set_pos << " set_type: " << set_types[set_pos] << "\n";
 	if (set_types[set_pos]==1) { //we are looking for a tset
             //std::cout << "We want a set!\n";
 	    TSet *tset=(TSet *) set_pointers[set_pos]; //current set
 	    uint32_t* p=binary_search(indices[set_pos],set_indices,set_indices+set_count-1); //return NULL, or a pointer to indices
-            //std::cout << "p " << p << "\n";
 
 	    if (p==NULL && !optional[set_pos]) { //didn't find it and it was compulsory...
+	        
 		return 1;
 	    }
 	    else if (p==NULL) { //didn't find it and it was not compulsory

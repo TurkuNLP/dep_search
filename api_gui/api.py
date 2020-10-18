@@ -16,7 +16,7 @@ import sys
 import glob
 from flask import jsonify
 import os.path
-
+import os
 from kwic import kwic_gen
 from freqs import get_freqs 
 import time
@@ -343,45 +343,16 @@ def gdsb():
     dbs = json.load(inf)
     inf.close()
 
+    return jsonify(get_node_with_kids(dbs, '')) 
 
-    mapdict = {}
-    xpx = []
-    dd = defaultdict(dict)
-    for k in dbs.keys():
-        init_path = dbs[k]#'/media/mjluot/b4ce4977-6aa1-44b2-87c1-bc149e48af35/dx/ndep_search/dep_search/PBs/'
-        if not init_path.endswith('/'):
-            init_path += '/'
-        dx = dd
-        root = k
-        mapdict[dbs[k].rstrip('/').split('/')[-1]] = k
-        if path.exists(os.path.join(init_path, "db_config.json")):
-            dd[root] = init_path
-        elif not os.path.isfile(dbs[root]): 
-            #dd[root] = {}
-
-            for dirname, dirnames, filenames in os.walk(init_path):
-                for subdirname in dirnames:
-                    if os.path.isdir(os.path.join(dirname, subdirname)):
-                        #print(os.path.join(dirname, subdirname))
-                        dx = dd
-                        for xx in os.path.join(dirname, subdirname).split('/')[len(init_path.split('/'))-2:-1]:
-                            dx = dx[xx]
-                        if path.exists(os.path.join(dirname, subdirname, "db_config.json")):
-                            dx[os.path.join(dirname, subdirname).split('/')[-1]] = os.path.join(dirname, subdirname)
-                        else:
-                            if not isinstance(os.path.join(dirname, subdirname).split('/')[-1], str):
-                                dx[os.path.join(dirname, subdirname).split('/')[-1]] = {}
-
-        xxm = {}
-        ff = {}
-        for k in dd:
-            #
-            if k in mapdict.keys():
-                ff[mapdict[k]] = dd[k]
-            else:
-                ff[k] = dd[k]
-
-    return jsonify(get_node_with_kids(ff, '')) 
+def flatten(current, key='', result=dict()):
+    if isinstance(current, dict):
+        for k in current:
+            new_key = k
+            flatten(current[k], new_key, result)
+    else:
+        result[key] = current
+    return result
 
 
 def get_flat_dbs():
@@ -391,41 +362,8 @@ def get_flat_dbs():
     dbs = json.load(inf)
     inf.close()
 
-    flat_dict = {}
-
-    xpx = []
-    dd = defaultdict(dict)
-    for k in dbs.keys():
-        print ('key', k)
-        init_path = dbs[k]
-        if not init_path.endswith('/'):
-            init_path += '/'
-        dx = dd
-        root = k
-            
-        if path.exists(os.path.join(init_path, "db_config.json")):
-            dd[root] = init_path
-            flat_dict[root] = init_path
-            print ('got!')
-        elif not os.path.isfile(dbs[root]):
-            print ('>>>')
-            dd[root] = {}
-            for dirname, dirnames, filenames in os.walk(init_path):
-                for subdirname in dirnames:
-                    if os.path.isdir(os.path.join(dirname, subdirname)):
-                        #print(os.path.join(dirname, subdirname))
-                        dx = dd
-                        for xx in os.path.join(dirname, subdirname).split('/')[len(init_path.split('/'))-2:-1]:
-                            dx = dx[xx]
-                        if path.exists(os.path.join(dirname, subdirname, "db_config.json")):
-                            dx[os.path.join(dirname, subdirname).split('/')[-1]] = os.path.join(dirname, subdirname)
-                            flat_dict[os.path.join(dirname, subdirname).split('/')[-1]] = os.path.join(dirname, subdirname)
-                        else:
-                            if not isinstance(os.path.join(dirname, subdirname).split('/')[-1], str):
-                                dx[os.path.join(dirname, subdirname).split('/')[-1]] = {}
-
-        xxm = {}
-
+    flat_dict = flatten(dbs)
+        
 
     return flat_dict
 
@@ -641,7 +579,24 @@ def hello_qcc(dbs, query, langs, limit, case):
     p.start()
     return ticket
 
+@app.route("/start_query/", methods=['POST'])
+def start_post():
 
+
+    dbs = request.form['dbs']
+    query = request.form['query']
+    langs = request.form['langs']
+    limit = request.form['limit']
+    case = request.form['case']
+
+
+
+
+    ticket = unique_id()
+    print (dbs,query, langs, ticket, limit, case)    
+    p = Process(target=query_process, args=(dbs,query, langs, ticket, limit, case))
+    p.start()
+    return ticket
 
 
 @app.route("/query_info/<ticket>")
@@ -682,7 +637,20 @@ def get_res_count(ticket):
     for k in tr:
         del res[k]
 
-    return jsonify(res)
+    better_res = {}
+    for k in res:
+        ## lang_ticket_number
+        print (k, res[k])
+        inf = open(res_file(str(k) + '_' + ticket + '_' + str(res[k])+".conllu"), 'rt')
+        cnt = 0
+        for l in inf:
+            if '# lang:' in l:
+                cnt += 1
+                print (':)')
+        inf.close()
+        better_res[k] = res[k] + cnt
+                
+    return jsonify(better_res)
 
 
     '''
@@ -737,10 +705,16 @@ def get_tree_count(ticket, lang):
 
     return json.dumps(trees)
 
-
-@app.route("/show/<ticket>/<lang>/<int:start>/<int:end>")
+import time
+@app.route("/show/<ticket>/<lang>/<start>/<end>")
 def get_xtrees(ticket, lang, start, end):
 
+    try:
+        start = int(start)
+        end = int(end)
+    except:
+        start = 0
+        end = 10
 
     inf = open('config.json', 'r')
     xx = json.load(inf)
@@ -753,43 +727,32 @@ def get_xtrees(ticket, lang, start, end):
 
     tc = 0
     curr_tree = []
-    '''
-    inf = open('./res/' + ticket,'rt')
-    for l in inf:
-        curr_tree.append(l)
-        if l == '\n':
-            
-            for c in curr_tree:
-                if c.startswith('# lang: ' + lang):
-                    if tc <= end and tc >= start:
-                        trees.append(''.join(curr_tree[:]))
-                    if tc > end:
-                        break
-                    tc += 1
-            curr_tree = []
-    '''      
+    try:
+        inf = open(res_file(ticket+'.json'), 'r')
+        inf.close()
+    except:
+        time.sleep(0.15)
+
     if lang == 'undefined':
         #
-        try:
-            inf = open(res_file(ticket+'.json'), 'r')
-            db = json.load(inf)
-            db = db["dbs"]
+        #try:
+        inf = open(res_file(ticket+'.json'), 'r')
+        db = json.load(inf)
+        db = db["dbs"]
+        inf.close()
+
+        dbs = get_flat_dbs()
+
+        for dib in db.split(','):
+            inf = open(dbs[dib] + '/langs', 'rt')
+            xx = []
+            for ln in inf:
+                xx.append(ln.strip())
+
             inf.close()
-
-            dbs = get_flat_dbs()
-
-            for dib in db.split(','):
-                inf = open(dbs[dib] + '/langs', 'rt')
-                xx = []
-                for ln in inf:
-                    xx.append(ln.strip())
-
-                inf.close()
-            return render_template('query.html', start=start, end=end, lang=xx[0], idx=ticket, approot=approot)
-        except:
-            return render_template("qx_hack.html", approot=approot)
-
-
+        return render_template('query.html', start=start, end=end, lang=xx[0], idx=ticket, approot=approot)
+        #except:
+        #    return render_template('query.html', start=0, end=(end-start), lang='unknown', idx=ticket, approot=approot)
   
     return render_template('query.html', start=start, end=end, lang=lang, idx=ticket, approot=approot)
 

@@ -224,7 +224,7 @@ function updatetrees(idx, start, end, lang){
     $.get("{{ approot }}/query_info/" + idx, function(xdata, status){
         console.log('***', xdata.length);
         if (xdata.length > 200) {xdata = xdata.substr(0,200) + '...'}
-        var text = document.createTextNode(xdata);
+        var text = "";//document.createTextNode(xdata);
         //alert(xdata);
         $('#queryjs').html("");
         $('#queryjs').append(text);
@@ -290,7 +290,7 @@ function update_stuff(){
        for(var key in data) {
            var value = data[key];
            console.log(data);
-           var text = document.createTextNode(key + "   " + value + "+    ");
+           var text = document.createTextNode(key + "   " + value + "    ");
            $('#res_count').append(text);
        }
     }); 
@@ -318,6 +318,7 @@ function update_stuff(){
 
                 var body = document.getElementById("queryinfo");
                 body.appendChild(button);
+                if (window.location.href.search("undefined") > 0){button.click();}
             }
             //alert(body);
 
@@ -395,6 +396,7 @@ $( document ).ready(function() {
 
             var body = document.getElementById("queryinfo");
             body.appendChild(button);
+            if (window.location.href.search("undefined") > 0){button.click();}
             //alert(body);
 
             //Add link
@@ -433,7 +435,7 @@ $( document ).ready(function() {
         var text = document.createTextNode(xdata);
         //alert(xdata);
         $('#queryjs').html("");
-        $('#queryjs').append(text);
+        $('#queryjs').append("");//text);
     }); 
 
     $.get("{{ approot }}/is_query_finished/" + idx, function(xdata, status){
