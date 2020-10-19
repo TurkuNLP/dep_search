@@ -326,106 +326,91 @@ def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang):
     q = fdb.tree_id_queue 
     #import pdb;pdb.set_trace()
     while True:
-        try:
-            idx = q.get()
-            #continue
+        idx = q.get()
+        #continue
 
-            if idx == -1:
-                end_cnt += 1
-                #print (fdb.is_finished())
-                #print (fdb.finished)
-                #print (fdb.started)
-                #print (fdb.processes)
-                #print ('!!!', end_cnt, len(args.langs.split(',')))
-                if end_cnt == len(args.langs.split(',')):
-                    break
-                continue
+        if idx == -1:
+            end_cnt += 1
+            #print (fdb.is_finished())
+            #print (fdb.finished)
+            #print (fdb.started)
+            #print (fdb.processes)
+            #print ('!!!', end_cnt, len(args.langs.split(',')))
+            if end_cnt == len(args.langs.split(',')):
+                break
+            continue
 
-            res_set = q_obj.check_tree_id(idx, db)
-            #idx += 1
-            #print (idx)
-            #print (res_set)
+        res_set = set()
+        res_set = q_obj.check_tree_id(idx, db)
+        #idx += 1
+        #print (idx)
+        #print (res_set)
+        #import pdb;pdb.set_trace()
+
+        if len(res_set) > 0:
+            #tree
             #import pdb;pdb.set_trace()
+            hit = q_obj.get_tree_text(comp_dict)
+            tree_comms = q_obj.get_tree_comms(comp_dict)
+            tree_lines=hit.split("\n")
 
-            if len(res_set) > 0:
-                #tree
-                #import pdb;pdb.set_trace()
-                hit = q_obj.get_tree_text(comp_dict)
-                tree_comms = q_obj.get_tree_comms(comp_dict)
-                tree_lines=hit.split("\n")
+            if counter >= max_hits and max_hits > 0:
+                break
+            its_a_hit = False
 
-                if counter >= max_hits and max_hits > 0:
-                    break
-                its_a_hit = False
-
-                try:
-                    lang = fdb.get_lang(idx)
-                except:
-                    lang = 'unknown'
-                    
-                if res_per_lang[lang] > max_hits:
-                    fdb.kill_threads()
-                    break
-                res_per_lang[lang] += 1
+            try:
+                lang = fdb.get_lang(idx)
+            except:
+                lang = 'unknown'
                 
-                print ('# lang:', lang)
-                    
-                try:
-                    print ('# doc:', fdb.get_url(idx))
-                except:
-                    pass
-                    
-                for r in res_set:
-                    print ("# db_tree_id:",idx)
-                    print ("# visual-style\t" + str(r + 1) + "\tbgColor:lightgreen")
-                    try:
-                        print ("# hittoken:\t"+tree_lines[r])
-                        its_a_hit = True
-                    except:
-                        pass
-                if its_a_hit:
+            if res_per_lang[lang] > max_hits:
+                fdb.kill_threads()
+                break
+            res_per_lang[lang] += 1
+            
+            print ('# lang:', lang)
+            print ('# doc:', fdb.get_url(idx))
+                
+            for r in res_set:
+                print ("# db_tree_id:",idx)
+                print ("# visual-style\t" + tree_lines[r].split('\t')[0] + "\tbgColor:lightgreen")
+                print ("# hittoken:\t"+tree_lines[r])
+                its_a_hit = True
+            if its_a_hit:
 
-                    if args.context>0:
-                        hit_url=get_url(tree_comms)
-                        texts=[]
-                        # get +/- context sentences from db
-                        for i in range(idx-args.context,idx+args.context+1):
-                            try:
-                                if i==idx:
-                                    data=hit
-                                else:
-                                    q_obj.set_tree_id(i, db)
-                                    data = q_obj.get_tree_text(comp_dict)
-                                    data_comment = q_obj.get_tree_comms(comp_dict)
-
-                                    if data is None or get_url(data_comment)!=hit_url:
-                                        continue
-                                text=u" ".join(t.split(u"\t",2)[1] for t in data.split(u"\n"))
-                                if i<idx:
-                                    texts.append(u"# context-before: "+text)
-                                elif i==idx:
-                                    texts.append(u"# context-hit: "+text)
-                                else:
-                                    texts.append(u"# context-after: "+text)
-                            except:
-                                pass
+                if args.context>0:
+                    hit_url=get_url(tree_comms)
+                    texts=[]
+                    # get +/- context sentences from db
+                    for i in range(idx-args.context,idx+args.context+1):
                         try:
-                            print (u"\n".join(text for text in texts)).encode(u"utf-8")
+                            if i==idx:
+                                data=hit
+                            else:
+                                q_obj.set_tree_id(i, db)
+                                data = q_obj.get_tree_text(comp_dict)
+                                data_comment = q_obj.get_tree_comms(comp_dict)
+
+                                if data is None or get_url(data_comment)!=hit_url:
+                                    continue
+                            text=u" ".join(t.split(u"\t",2)[1] for t in data.split(u"\n"))
+                            if i<idx:
+                                texts.append(u"# context-before: "+text)
+                            elif i==idx:
+                                texts.append(u"# context-hit: "+text)
+                            else:
+                                texts.append(u"# context-after: "+text)
                         except:
                             pass
+                    try:
+                        print (u"\n".join(text for text in texts)).encode(u"utf-8")
+                    except:
+                        pass
 
-                    print (tree_comms)
-                    print (hit)
-                    print ()
-                    counter += 1
-
-                #import pdb;pdb.set_trace(
-        except:
-            import traceback
-            traceback.print_exc()
-            pass
-            if idx > 0: break
-    #import pdb;pdb.set_trace()
+                print (tree_comms)
+                print (hit)
+                print ()
+                counter += 1
 
     fdb.kill_threads()
     #print ('cn', counter)
