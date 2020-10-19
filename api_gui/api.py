@@ -623,7 +623,7 @@ def get_res_count(ticket):
 
     res = {}
     for f in files:
-        lang = f.split('/')[-1].split('_')[0]
+        lang = '_'.join(f.split('/')[-1].split('_')[:-2])
         number = int(f.split('/')[-1].split('_')[-1].split('.')[0])
         if lang not in res.keys():
             res[lang] = 0
