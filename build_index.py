@@ -328,10 +328,6 @@ if __name__=="__main__":
             set_indexes = struct.unpack('=' + str(set_cnt[0]) + 'I', blob[6:6+set_cnt[0]*4])
             arr_indexes = struct.unpack('=' + str(arr_cnt[0]) + 'I', blob[6+set_cnt[0]*4:6+set_cnt[0]*4+arr_cnt[0]*4])
 
-            if len(sent) == 1:
-                print (":)")
-                print (set_cnt, arr_cnt, set_indexes, arr_indexes)
-
 
             setarr_count.update(set_indexes + arr_indexes)
             try:

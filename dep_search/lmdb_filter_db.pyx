@@ -40,13 +40,13 @@ class Query():
         self.db = self.env.open_db()
         #self.txn = self.env.begin()
 
+
 	#Start the main loop thread
-        if len(langs) < 1:
+        if len(langs) < 1 or langs == ['']:
             self.processes['main'] = Process(target=self.main_loop)
             self.processes['main'].start()
         else:
             for l in langs:
-                #print (l)
                 self.processes[l] = Process(target=self.main_loop_lang, args=(l,))
                 self.processes[l].start()
         self.started = True
@@ -135,7 +135,6 @@ class Query():
             counts.append((int(self.get_count(rec)), rec))
         #import pdb;pdb.set_trace()
         counts.sort()
-
         rarest_pref=counts[0][1].encode('utf8')
         with self.env.begin() as txn:
             cursor = txn.cursor()
@@ -148,10 +147,11 @@ class Query():
                 for c in counts:
 
                     found = False
-                    try:
-                        if txn.get(c[1].encode('utf8') + '_'.encode('utf8') + key.split(b'_')[-1], default=None) != None:
-                            found = True
-                    except:
+                    #try:
+                    if txn.get(c[1].encode('utf8') + '_'.encode('utf8') + key.split(b'_')[-1], default=None) != None:
+                        found = True
+                    #except:
+                    else:
                         found = False
             
                     if not found:

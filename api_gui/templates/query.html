@@ -80,6 +80,17 @@ button:hover {
   background-color: #4CAF50; /* Green */
   color: white;
 }
+
+</style>
+
+<style type="text/css">
+ span.bold-red {
+    color: red;
+    font-weight: bold;
+}
+</style>
+
+
     </style>
 
 
@@ -138,8 +149,13 @@ button:hover {
 <div style="background-color:lightblue"  id="queryinfo">
 <div id="queryjs">
 </div>
+
 <div id="qff">
 </div>
+
+<div id="queryjs2">
+</div>
+
 <div id="err">
 </div>
 
@@ -268,9 +284,73 @@ function loadtrees(idx, start, end, lang){
 function update_stuff(){
 
 
-   if (done == false){
+   //if (done == false){
+   if (!done) {
 
      updatetrees(idx, start, end, lang);
+
+    $.get("{{ approot }}/query_info/" + idx, function(xdata, status){
+        console.log('***', xdata.length);
+        //if (xdata.length > 200) {xdata = xdata.substr(0,200) + '...'}
+        var text = document.createTextNode(xdata);
+        //alert(JSON.parse(xdata)['query']);
+        var text = document.createTextNode(JSON.parse(xdata)['query']);
+        $('#queryjs2').html(text);
+    }); 
+
+
+
+
+
+
+    //langs in q
+    if (!done){
+    $.get("{{ approot }}/get_result_count/" + idx, function(data, status){
+        //
+       var arrayLength = data.length;
+       for(var key in data) {
+           var xx = key;
+
+            console.log(data);
+
+            if (!langs.includes(xx)){
+
+                langs.push(xx);
+
+                var button = document.createElement("button");
+                button.setAttribute("id", "lang_btn_" + xx);
+                button.setAttribute("lang", xx);
+                button.setAttribute("onclick", "xmove(this);");
+                button.innerHTML = xx + '(' + data[key] + ')';
+
+                var body = document.getElementById("queryinfo");
+                body.appendChild(button);
+                if (window.location.href.search("undefined") > 0){button.click();}
+            }
+            else {
+            
+            $('#lang_btn_' + xx).html(xx + '(' + data[key] + ')');
+            
+            }
+            //alert(body);
+
+            //Add link
+         
+        }
+
+    });
+
+
+    $.get("{{ approot }}/get_result_count/" + idx, function(data, status){
+       
+       $('#res_count').html("");
+       for(var key in data) {
+           var value = data[key];
+           console.log(key + '(' + value + ')');
+           $('#lang_btn_' + key).html(key + '(' + value + ')');
+       }
+    }); 
+
 
 
     $.get("{{ approot }}/is_query_finished/" + idx, function(xdata, status){
@@ -284,53 +364,7 @@ function update_stuff(){
 
     }); 
 
-    $.get("{{ approot }}/get_result_count/" + idx, function(data, status){
-       
-       $('#res_count').html("");
-       for(var key in data) {
-           var value = data[key];
-           console.log(data);
-           var text = document.createTextNode(key + "   " + value + "    ");
-           $('#res_count').append(text);
-       }
-    }); 
-
-
-    //langs in q
-    $.get("{{ approot }}/get_result_langs/" + idx, function(data, status){
-        //
-        var arrayLength = data.length;
-        for (var i = 0; i < arrayLength; i++) {
-            var xx = data[i];
-            //langs.push(xx);
-            //alert(data[i]);
-            //Add button
-
-            if (!langs.includes(xx)){
-
-                langs.push(xx);
-
-                var button = document.createElement("button");
-                button.setAttribute("id", "lang_btn_" + xx);
-                button.setAttribute("lang", xx);
-                button.setAttribute("onclick", "xmove(this);");
-                button.innerHTML = data[i];
-
-                var body = document.getElementById("queryinfo");
-                body.appendChild(button);
-                if (window.location.href.search("undefined") > 0){button.click();}
-            }
-            //alert(body);
-
-            //Add link
-         
-        }
-
-    });
-
-
-
-
+    }
 
     }
 }
@@ -345,7 +379,7 @@ function xmove(xx){
 
 }
 
-
+var TTT = '';
 
 $( document ).ready(function() {
 
@@ -431,11 +465,11 @@ $( document ).ready(function() {
 
     $.get("{{ approot }}/query_info/" + idx, function(xdata, status){
         console.log('***', xdata.length);
-        if (xdata.length > 200) {xdata = xdata.substr(0,200) + '...'}
+        //if (xdata.length > 200) {xdata = xdata.substr(0,200) + '...'}
         var text = document.createTextNode(xdata);
-        //alert(xdata);
-        $('#queryjs').html("");
-        $('#queryjs').append("");//text);
+        //alert(JSON.parse(xdata)['query']);
+        var text = document.createTextNode(JSON.parse(xdata)['query']);
+        $('#queryjs2').html(text);
     }); 
 
     $.get("{{ approot }}/is_query_finished/" + idx, function(xdata, status){

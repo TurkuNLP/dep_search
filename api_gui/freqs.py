@@ -188,8 +188,6 @@ def calc_freqs(f, freqs):
         #
         freqs['wfs'] = set()
 
-
-
     freqs['tokens'] += tokens
     freqs['trees'] += trees
     freqs['hits'] += hits
@@ -197,9 +195,7 @@ def calc_freqs(f, freqs):
     freqs['lemmas'].update(lemmas)
     freqs['wfs'].update(wfs)
 
-
     return freqs
-
 
 def get_freqs(f):
 
@@ -211,10 +207,8 @@ def get_freqs(f):
     for f in files:
         freqs = calc_freqs(f, freqs)
 
-
-    #
     xx = {}
-    for kk in ["dependent_words","dependent_lemmas","right_words","right_lemmas","parent_words","parent_lemmas","deptypes_as_dependent","deptypes_as_parent","hit_words","hit_lemmas"]:
+    for kk in ["dependent_words","dependent_lemmas","right_words","right_lemmas","parent_words","parent_lemmas","deptypes_as_dependent","deptypes_as_parent","hit_words","hit_lemmas", "left_words","left_lemmas"]:
         #Counter
         xx[kk + '_most_common'] = Counter(freqs[kk]).most_common(10)
         #All

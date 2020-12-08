@@ -68,7 +68,7 @@ class DB(BaseDB):
             try:
                 self.next_free_tag_id = max(vals) + 1
             except:
-                self.next_free_tag_id = 0
+                self.next_free_tag_id = 1
 
     #
     def close(self):
@@ -97,7 +97,6 @@ class DB(BaseDB):
 
     #
     def has_id(self, idx):
-        #print (idx)
 
         if self.cache:
             if 'tag_'.encode('utf8') + idx.encode('utf8') in self.tags.keys():
@@ -124,7 +123,7 @@ class DB(BaseDB):
     def store_a_vocab_item(self, item):
         if not self.has_id(item):
             if self.next_free_tag_id == None:
-                self.next_free_tag_id = int(self.get_count('tag_'))
+                self.next_free_tag_id = int(self.get_count('tag_')) + 1
 
             if self.cache:# and not self.cache_full:
                 

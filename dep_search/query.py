@@ -313,7 +313,8 @@ def get_url(comments):
 def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang):
 
     #init the dbs
-    q_obj.set_db(set_id_db)
+    if q_obj.set_db(set_id_db) == -1:
+        return 0
 
     #This is a first try and an example without filter db
     idx = 1
@@ -321,7 +322,6 @@ def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang):
     max_hits = args.max
 
     end_cnt = 0 
-
 
     q = fdb.tree_id_queue 
     #import pdb;pdb.set_trace()
@@ -372,9 +372,12 @@ def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang):
             print ('# doc:', fdb.get_url(idx))
                 
             for r in res_set:
-                print ("# db_tree_id:",idx)
-                print ("# visual-style\t" + tree_lines[r].split('\t')[0] + "\tbgColor:lightgreen")
-                print ("# hittoken:\t"+tree_lines[r])
+                try:
+                    print ("# db_tree_id:",idx)
+                    print ("# hittoken:\t"+tree_lines[r])                
+                    print ("# visual-style\t" + tree_lines[r].split('\t')[0] + "\tbgColor:lightgreen")
+                except:
+                    pass
                 its_a_hit = True
             if its_a_hit:
 
@@ -416,6 +419,150 @@ def query_from_db(q_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang):
     #print ('cn', counter)
     return counter
 
+
+
+def query_from_db_chop(q_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang):
+
+    res_dir = args.chop_dir
+    ticket = args.chop_ticket
+
+
+    def res_file(basename):
+        return os.path.join(res_dir, basename)
+
+    counts = defaultdict(int)
+    step = 10
+    langs = set()
+    lang = '-'
+    outfs = {}
+
+    #init the dbs
+    if q_obj.set_db(set_id_db) == -1:
+        return 0
+
+    #This is a first try and an example without filter db
+    idx = 1
+    counter = 0
+    max_hits = args.max
+
+    end_cnt = 0 
+
+    q = fdb.tree_id_queue 
+    while True:
+        idx = q.get()
+        #continue
+
+        if idx == -1:
+            end_cnt += 1
+            if end_cnt == len(args.langs.split(',')):
+                break
+            continue
+
+        res_set = set()
+        res_set = q_obj.check_tree_id(idx, db)
+
+        if len(res_set) > 0:
+            #tree
+            hit = q_obj.get_tree_text(comp_dict)
+            tree_comms = q_obj.get_tree_comms(comp_dict)
+            tree_lines=hit.split("\n")
+
+            if counter >= max_hits and max_hits > 0:
+                break
+            its_a_hit = False
+
+            try:
+                lang = fdb.get_lang(idx)
+            except:
+                lang = 'unknown'
+
+            if lang not in langs:
+                langs.add(lang)
+                try:
+                    xx = open(res_file(ticket + '.langs'), 'rb')
+                    xlangs = json.loads(xx.read())
+                    xx.close()
+                except:
+                    xlangs = []
+                
+                xx = open(res_file(ticket + '.langs'), 'wb')
+                ret = json.dumps(list(set(xlangs + list(langs)))).encode('utf8')
+                xx.write(ret)
+                xx.close()
+
+                
+            if res_per_lang[lang] > max_hits:
+                fdb.kill_threads()
+                break
+            res_per_lang[lang] += 1
+
+            if counts[lang]%10==0:
+                if lang not in outfs.keys():
+                    outfs[lang] = open(res_file(lang + '_' + ticket + '_' + str(round(counts[lang],-1)) + '.conllu'), 'a+t')
+                else:
+                    outfs[lang].close()
+                    outfs[lang] = open(res_file(lang + '_' + ticket + '_' + str(round(counts[lang],-1)) + '.conllu'), 'a+t')                    
+            counts[lang] += 1
+
+
+            
+            outfs[lang].write('# lang: ' + lang + '\n')
+            outfs[lang].write('# doc: ' + fdb.get_url(idx) + '\n')
+                
+            for r in res_set:
+                try:
+                    outfs[lang].write("# db_tree_id: " + str(idx) + '\n')
+                    outfs[lang].write("# hittoken:\t"+tree_lines[r] + '\n')
+                    outfs[lang].write("# xxx:\t"+ str(r) + '\n')               
+                    outfs[lang].write("# visual-style\t" + tree_lines[r].split('\t')[0] + "\tbgColor:lightgreen" + '\n')
+                except:
+                    pass
+                its_a_hit = True
+            if its_a_hit:
+
+                if args.context>0:
+                    hit_url=get_url(tree_comms)
+                    texts=[]
+                    # get +/- context sentences from db
+                    for i in range(idx-args.context,idx+args.context+1):
+                        try:
+                            if i==idx:
+                                data=hit
+                            else:
+                                q_obj.set_tree_id(i, db)
+                                data = q_obj.get_tree_text(comp_dict)
+                                data_comment = q_obj.get_tree_comms(comp_dict)
+
+                                if data is None or get_url(data_comment)!=hit_url:
+                                    continue
+                            text=u" ".join(t.split(u"\t",2)[1] for t in data.split(u"\n"))
+                            if i<idx:
+                                texts.append(u"# context-before: "+text)
+                            elif i==idx:
+                                texts.append(u"# context-hit: "+text)
+                            else:
+                                texts.append(u"# context-after: "+text)
+                        except:
+                            pass
+                    try:
+                        outf.write((u"\n".join(text for text in texts)).encode(u"utf-8"))
+                    except:
+                        pass
+
+                outfs[lang].write(tree_comms + '\n')
+                outfs[lang].write(hit + '\n')
+                outfs[lang].write('\n')
+                counter += 1
+
+    for of in outfs.keys():
+        outfs[of].close()
+    fdb.kill_threads()
+    #print ('cn', counter)
+    return counter
+
+
+
+
 from collections import defaultdict
 
 def main(argv):
@@ -437,6 +584,9 @@ def main(argv):
     parser.add_argument('--extra-solr-term',default=[],action="append",help="Extra restrictions on Solr, strings passed verbatim in the Solr query, you can have several of these")
     parser.add_argument('--extra-solr-params',default="",help="Extra parameters on Solr - a dictionary passed verbatim in the Solr request")
     parser.add_argument('--langs',default="",help="List of language codes to be queried")
+    parser.add_argument('--chop_dir',default="",help="For api")
+    parser.add_argument('--chop_ticket',default="",help="For api")    
+
 
     args = parser.parse_args(argv[1:])
     rcnt = 0
@@ -456,18 +606,18 @@ def main(argv):
     elif ',' in args.database:
         for db in args.database.split(','):
             if rcnt >= args.max:
-                continue        
+                continue
+                
             xargs = copy.copy(args)
             xargs.database = db
             langs = get_db_langs(db)
-            
             langs_left = False
             for l in langs:
                 if res_per_lang[l] < args.max:
                     langs_left = True
             if langs_left:
                 xx, mod = main_db_query(xargs, res_per_lang, mod=mod)
-
+                
     else:
         rcnt, _ = main_db_query(args, res_per_lang)
     print ("Total number of hits:",rcnt,file=sys.stderr)
@@ -533,16 +683,13 @@ def get_query_mod(query_dir, search, case, set_id_db, database):
 def main_db_query(args, res_per_lang, mod=None):
 
     #The blob and id database
-    
     sys.stderr.write(str(args))
     inf = open(args.database+'/db_config.json', 'rt')
     db_args = json.load(inf)
     inf.close()
-
     db_class = importlib.import_module('dep_search.' + db_args['blobdb'])
     db = db_class.DB(args.database)
     db.open()
-
     set_id_db = db_class.DB(args.database)
     set_id_db.open(foldername = '/set_id_db/')
 
@@ -559,10 +706,23 @@ def main_db_query(args, res_per_lang, mod=None):
             set_id_db,
             args.database
         )
+        print("compiled!", file=sys.stderr)
+    else:
+        query_obj = mod.GeneratedSearch()
+        if query_obj.should_recompile(set_id_db):
+            print ('recompli')
+            mod = get_query_mod(
+                args.query_dir,
+                args.search,
+                args.case,
+                set_id_db,
+                args.database
+            )            
     query_obj = mod.GeneratedSearch()
+    
+
 
     total_hits=0
-
     #Loading and opening the databases or connections
 
     #The blob and id database
@@ -577,14 +737,12 @@ def main_db_query(args, res_per_lang, mod=None):
     #... and lets load the filter db for fetching the filter list
     fdb_class = importlib.import_module('dep_search.' + db_args['filterdb'])
     rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, solr_or_groups = query_obj.map_set_id(set_id_db)
-
     try:
         extra_params= ast.literal_eval(args.extra_solr_params)
     except:
         extra_params = {}
-
-    inf = open(args.database + '/comp_dict.pickle','rb')
-    comp_dict = pickle.load(inf)
+    #inf = open(args.database + '/comp_dict.pickle','rb')
+    comp_dict = {}#pickle.load(inf)
     inf.close()
     
     langs=[]
@@ -595,13 +753,17 @@ def main_db_query(args, res_per_lang, mod=None):
     if ',' in args.langs:
         langs = args.langs.split(',')
 
+
     if not db_args['filterdb'].startswith('solr_filter_db'):
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, args.database, args.case, query_obj, extra_params=extra_params, langs=langs)
     else:
         fdb = fdb_class.Query(args.extra_solr_term, [item[1:] for item in solr_args if item.startswith('!')], solr_or_groups, solr_url, args.case, query_obj, extra_params=extra_params, langs=langs)
 
-    total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang)
-
+    if args.chop_ticket == '':
+        total_hits+=query_from_db(query_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang)
+    else:
+        total_hits+=query_from_db_chop(query_obj, args, db, fdb, set_id_db, comp_dict, res_per_lang)        
+    fdb.kill_threads()
 
 
     if not args.keep_query:

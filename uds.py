@@ -3,6 +3,11 @@ import os
 
 def main():
 
+
+    try:
+        os.mkdir('../xud_dbs/')
+    except:pass
+
     pairs = []
     for f in glob.glob('../uds/UD_*'):
         #try:

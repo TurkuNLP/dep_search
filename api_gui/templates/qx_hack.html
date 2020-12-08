@@ -65,6 +65,7 @@ input[type=button]:hover {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/themes/default/style.min.css" />
 <script src="{{ approot }}/static/dist/tree.min.js"></script>
 <h2>Query</h2>
+<div style="display:inline">
 <div id='query'>
 <input id="qrt" type="textarea" name="vehicle1" value="_ <nsubj _"><br>
 Result Limit:<br>
@@ -72,9 +73,13 @@ Result Limit:<br>
 <input type="checkbox" id="xcasex" name="xcasex">Case Insensitive<br>
   <input id="sbtn" type="button" value="Submit">
 </div>
+<div id="error" style="border: 2px solid red;border-radius: 5px;max-width: 50%;left-padding: 20px;"></div>
+</div>
 Query Language is documented <a href="https://bionlp.utu.fi/searchexpressions-new.html">here</a>
 <br><h2>Databases</h2>
-<div style="background-color:lightblue" id="container">
+<div>
+<div style="background-color:lightblue; float: none;" id="container">
+</div>
 <br>
 </div>
 
@@ -83,11 +88,11 @@ Query Language is documented <a href="https://bionlp.utu.fi/searchexpressions-ne
 <br><h2>Available languages</h2>
 Selecting languages limit search to these, no selection means all languages are queried.
 <br>
-<div style="background-color:lightblue" id="langs">
+<div style="background-color:lightblue; float:none;" id="langs">
   <input type="checkbox" name="lang_all" value="all">all<br>
 </div>
-
-
+<br>
+<div id="tagss" style="border: 2px solid black;border-radius: 5px;width: 50%;left-padding: 20px;float: left;"></div>
 <script>
 var global_dbs = "";
 var tree = "";
@@ -107,9 +112,13 @@ function is_in_lang_list(lang){
     return retval;
 }
 
+function set_xx(vv){
+$("#qrt").val(vv);
+}
 
 $( document ).ready(function() { 
 
+    $('#error').hide();
     $.getJSON(approot + '/get_dbs_json', function(data) {
         
         tree = new Tree('#container', {
@@ -128,6 +137,74 @@ $( document ).ready(function() {
     });
 
     
+    $('#langs').click(function() {
+        //alert(':M');
+        //Okay, lets update the langs
+        //Let's check which dbs are checked
+        var xx = global_dbs;
+        console.log(xx);
+        //wipe langs
+        //get relevant langs and update langs
+        
+        var xx = global_dbs;
+        console.log(xx);
+        var dbs = [];
+        for (var it in xx){
+            console.log(xx[it]);
+            dbs.push(xx[it]);
+        }
+
+        var xx = $( ".bln" ).map( function( index, element ) {if (element.checked) {return element.value;}}).get();
+        console.log(xx);
+        var langs = [];
+        for (var it in xx){
+            console.log(it);
+            langs.push(xx[it]);
+        }
+        console.log(langs);
+
+        lang_str = "";
+        for (lang in langs){
+            if (lang > 0){
+                lang_str = lang_str + ',';
+            }
+            lang_str = lang_str + langs[lang];
+        }
+
+
+        
+        $.post(approot + '/get_tags/', {'dbs': dbs.join(','), 'langs': lang_str}, function(data, status){
+        
+            var ihtml = "";
+            ihtml = '<h2>Dependency types</h2>'
+            var cc = 0;
+            for (hh in data[0]){
+                ihtml += '<div onclick="set_xx(\'_ <' + data[0][hh] + ' _\');" style="display: inline;" id="' + data[0][hh] + '_link">' + data[0][hh] + '</div> '
+                cc += 1
+            }
+            ihtml += '<h2>POS tags</h2>'
+            var cc = 0;
+            for (hh in data[1]){
+                ihtml += '<div onclick="set_xx(\'' + data[1][hh] + '\');" style="display: inline;" id="' + data[1][hh] + '_link">' + data[1][hh] + '</div> '
+                cc += 1
+            }
+
+            ihtml += '<h2>Morphological tags</h2>'
+            var cc = 0;
+            for (hh in data[2]){
+                ihtml += '<div onclick="set_xx(\'' + data[2][hh] + '\');" style="display: inline;" id="' + data[2][hh] + '_link">' + data[2][hh] + '</div> '
+                cc += 1
+            }
+                
+        
+            $('#tagss').html(ihtml);//data[0].join('<br>') + '<p>' + data[1].join('<br>') + '<p>' + data[2].join('<br>') + '<p>' );
+            $('#tagss').show();
+        });
+         
+
+    });
+
+
     // Okay, when touched, update langs
     $('#container').click(function() {
         //alert(':M');
@@ -150,8 +227,70 @@ $( document ).ready(function() {
             }
 	});
         
+
+
+        var xx = global_dbs;
+        console.log(xx);
+        var dbs = [];
+        for (var it in xx){
+            console.log(xx[it]);
+            dbs.push(xx[it]);
+        }
+
+
+
+        var xx = $( ".bln" ).map( function( index, element ) {if (element.checked) {return element.value;}}).get();
+        console.log(xx);
+        var langs = [];
+        for (var it in xx){
+            console.log(it);
+            langs.push(xx[it]);
+        }
+        console.log(langs);
+
+        lang_str = "";
+        for (lang in langs){
+            if (lang > 0){
+                lang_str = lang_str + ',';
+            }
+            lang_str = lang_str + langs[lang];
+        }
+
+
+        
+        $.post(approot + '/get_tags/', {'dbs': dbs.join(','), 'langs': lang_str}, function(data, status){
+        
+            var ihtml = "";
+            ihtml = '<h2>Dependency types</h2>'
+            var cc = 0;
+            for (hh in data[0]){
+                ihtml += '<div onclick="set_xx(\'_ <' + data[0][hh] + ' _\');" style="display: inline;" id="' + data[0][hh] + '_link">' + data[0][hh] + '</div> '
+                cc += 1
+            }
+            ihtml += '<h2>POS tags</h2>'
+            var cc = 0;
+            for (hh in data[1]){
+                ihtml += '<div onclick="set_xx(\'' + data[1][hh] + '\');" style="display: inline;" id="' + data[1][hh] + '_link">' + data[1][hh] + '</div> '
+                cc += 1
+            }
+
+            ihtml += '<h2>Morphological tags</h2>'
+            var cc = 0;
+            for (hh in data[2]){
+                ihtml += '<div onclick="set_xx(\'' + data[2][hh] + '\');" style="display: inline;" id="' + data[2][hh] + '_link">' + data[2][hh] + '</div> '
+                cc += 1
+            }
+                
+        
+            $('#tagss').html(ihtml);//data[0].join('<br>') + '<p>' + data[1].join('<br>') + '<p>' + data[2].join('<br>') + '<p>' );
+            $('#tagss').show();
+        });
+
+
+
        
     });
+
 
     $('#sbtn').click(function(){
 
@@ -202,9 +341,9 @@ $( document ).ready(function() {
         var checkBox = document.getElementById("xcasex");
 
 
-        var casex = "false";
+        var casex = false;
         if (checkBox.checked){
-            casex = "true";
+            casex = true;
         }
 
         console.log(checkBox.checked);
@@ -219,28 +358,42 @@ $( document ).ready(function() {
 
 
 
-
+        console.log('case', casex);
         //launch
-        $.post(approot + '/start_query/', { 'dbs': db_str, 'query': query, 'langs': lang_str, 'limit': limit, 'case': casex }, function(data, status){
+        
+        
+        $.post(approot + '/check_query_syntax/', { 'dbs': db_str, 'query': query, 'langs': lang_str, 'limit': limit, 'case': casex }, function(data, status){
+            console.log('!!!', data);
+
+            if (data[0]){
+                   $('#error').hide();
+		    $.post(approot + '/start_query/', { 'dbs': db_str, 'query': query, 'langs': lang_str, 'limit': limit, 'case': casex }, function(data, status){
+			    var a = document.createElement('a');
+			    var nn = query + '  ' + lang_str + '  ' + db_str;
+			    if (nn.length > 50){ nn = nn.substr(1,50)}
+			    var linkText = document.createTextNode(nn);
+			    a.appendChild(linkText);
+			    a.href = approot + '/show/' + data + '/' + langs[0] + '/0/10';
+			    document.body.appendChild(a);
+			    var a = document.createElement('br');
+			    document.body.appendChild(a);
+			    window.open(approot + '/show/' + data + '/' + langs[0] + '/0/10', '_blank');
+
+		});
+            
+            }else{
+            //show the error
+                $('#error').show();
+                $('#error').html('<pre>' + data[1] + '</pre>')            
+            }
 
 
-            //"/show/<ticket>/<lang>/<int:start>/<int:end>"
-            //document.body.append('<a href="/show/' + data + '/' + langs[0] + '/0/10' + '">' + query + '</a>');
-            //console.log(data);
-            var a = document.createElement('a');
-            var nn = query + '  ' + lang_str + '  ' + db_str;
-            if (nn.length > 50){ nn = nn.substr(1,50)}
-            var linkText = document.createTextNode(nn);
-            a.appendChild(linkText);
-            a.href = approot + '/show/' + data + '/' + langs[0] + '/0/10';
-            document.body.appendChild(a);
-            //$('#langs').insertAdjacentElement('afterend', a)
-            var a = document.createElement('br');
-            document.body.appendChild(a);
-            //$('#langs').insertAdjacentElement('afterend', a)
-            window.open(approot + '/show/' + data + '/' + langs[0] + '/0/10', '_blank');
 
-        });
+        });        
+        
+        
+        
+
 
     });
 

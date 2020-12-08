@@ -120,7 +120,7 @@ cdef class Search:  # base class for all searches
             ##print >> sys.stderr, "narg:", narg
             optional.append(not compulsory)
 
-            oarg = 0
+            oarg = -1
 
             if narg.startswith('dep_a'):
                 if db.has_id(u'd_' + narg[6:]):
@@ -214,11 +214,35 @@ cdef class Search:  # base class for all searches
         ##print >> sys.stderr, 'optional:', optional
         ##print >> sys.stderr, 'types:', types
         solr_or_groups = []
+        try:
+            xxx = self.set_db_options(just_all_set_ids, types, optional)
+            #return rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, or_groups
+            return 1
+        except:
+            return -1
 
-        self.set_db_options(just_all_set_ids, types, optional)
-        #return rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, or_groups
 
+    def restore_query_fields(self):
+        pass#self.query_fields = self.original_query_fields
 
+    def should_recompile(self, db):
+        did_it_work = False
+        for i in range(len(self.query_fields)):
+            #!token_s_
+            #!tag_s
+            #org_0_token_s_
+            if self.query_fields[i].startswith('!token_s'):
+                if db.has_id(self.query_fields[i].lstrip('!token_s')):
+                    did_it_work = True
+            if self.query_fields[i].startswith('token_s'):
+                if db.has_id(self.query_fields[i].lstrip('token_s')):
+                    did_it_work = True
+            if self.query_fields[i].startswith('f_'):
+                if db.has_id(self.query_fields[i].lstrip('f_')):
+                    did_it_work = True
+                    
+        return did_it_work
+        
     def map_set_id(self, db):
 
         args = self.query_fields
@@ -348,6 +372,7 @@ cdef class Search:  # base class for all searches
         ##print >> sys.stderr, 'optional:', optional
         ##print >> sys.stderr, 'types:', types
         solr_or_groups = []
+        
         return rarest, c_args_s, s_args_s, c_args_m, s_args_m, just_all_set_ids, types, optional, solr_args, or_groups
 
     cpdef fill_from_blob(self, char *blob):
@@ -392,6 +417,8 @@ cdef class Search:  # base class for all searches
 
         self.set_size = len(p_set_ids)
         self.started = False
+        return p_set_ids
+
 
     def set_tree_id(self, uint32_t tree_id, db):
         blob = db.get_blob(tree_id)
@@ -406,8 +433,8 @@ cdef class Search:  # base class for all searches
         #print ('!!!', self.blob)
         has_sets = self.fill_from_blob(<char*>blob)
 
-        #if has_sets==1:
-        #    return set()
+        if has_sets==1:
+            return set()
         self.initialize()
         result=self.exec_search()
         #print (result)

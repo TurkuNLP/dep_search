@@ -27,12 +27,14 @@ from flask import Flask, request
 import hashlib
 from werkzeug.utils import secure_filename, escape
 import uuid
+from dep_search import redone_expr
 dd = defaultdict(dict)
 
 
 
-app = Flask(__name__)
 
+app = Flask(__name__)
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 RES_DIR = os.path.join(THIS_DIR, "res")
@@ -94,19 +96,27 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
     os.system('python3 res_cleaner.py &')
     langs = ','.join(langs)
 
+
+    print ('case2', type(case))
     if len(langs) > 0:
-        if case:
-            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs, '--case', query], cwd='../', stdout=subprocess.PIPE)
+        if case == 'true':
+            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs, '--chop_dir', RES_DIR, '--chop_ticket', ticket, '--case', query], cwd='../')
+            print (' '.join(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs, '--chop_dir', RES_DIR, '--chop_ticket', ticket, '--case', query]))
         else:
-            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs,  query], cwd='../', stdout=subprocess.PIPE)
+            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs, '--chop_dir', RES_DIR, '--chop_ticket', ticket,  query], cwd='../')
+            print (' '.join(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--langs', langs, '--chop_dir', RES_DIR, '--chop_ticket', ticket,  query]))
     else:
-        if case:
-            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--case', query], cwd='../', stdout=subprocess.PIPE)
+        if case == 'true':
+            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--chop_dir', RES_DIR, '--chop_ticket', ticket, '--case', query], cwd='../')
+            print (' '.join(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--chop_dir', RES_DIR, '--chop_ticket', ticket, '--case', query]))
         else:
-            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4',  query], cwd='../', stdout=subprocess.PIPE)
+            p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--chop_dir', RES_DIR, '--chop_ticket', ticket,  query], cwd='../')
+            print (' '.join(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--chop_dir', RES_DIR, '--chop_ticket', ticket,  query]))
 
-
-
+    #oug = open(res_file("ticket.res"), 'wb')
+    #p = subprocess.Popen(['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--chop_dir', RES_DIR, '--chop_ticket', ticket , query], cwd='../')
+    
+    #print ('!!!!!', ['python3', 'query.py', '-d', db_string, '-m', str(limit), '--context', '4', '--chop_dir', RES_DIR, '--chop_ticket', ticket , query])
     xoutf = open(res_file(ticket + '.json'),'wt')
     xoutf.write(json.dumps({'query':query, 'dbs':dbs, 'langs':langs, 'ticket':ticket, 'limit': limit}))
     xoutf.close()
@@ -121,14 +131,38 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
 
     outfs = {}
 
-    tree = []
-    for l in p.stdout:
-        try:
-            l = l.decode('utf8')
-        except:
-            pass
-        tree.append(l)
+    err_out = open(res_file(ticket + '_err'), 'wb')
+    '''
+    for l in p.stderr:
+        print (l)
+        if b'compiled' in l :break
+        if b"redone_expr.ExpressionError" in l:
+            err_out.write(l.split(b':')[1])
+        if l.startswith(b"HERE"):
+            err_out.write(l)
+            break
+    '''        
+    err_out.close()
 
+    tree = []
+    print ('FUGG')
+    empty_cnt = 0
+    #p.wait()
+    '''
+    while True:
+        print ('poll', p.poll())   
+        l = p.stdout.readline()
+        l = l.decode('utf8')
+        print (l)
+        if len(l) < 1:
+            empty_cnt += 1
+            if empty_cnt > 10:
+                print ('!!!') 
+                break
+            continue
+        else:
+            empty_cnt = 0
+            tree.append(l)
         if len(l)<1 or l.startswith('\n'):
             lang = 'unknown'
             if tree[0].startswith('# lang'):
@@ -138,7 +172,6 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
                     xx = open(res_file(ticket + '.langs'), 'w')
                     xx.write(json.dumps(list(langs)))
                     xx.close()
-                                
             
             if counts[lang]%10==0:
                 if lang not in outfs.keys():
@@ -151,9 +184,12 @@ def query_process(dbs, query, langs, ticket, limit=10000, case=False):
                 outfs[lang].write(tl)
             tree = []
 
+
     for of in outfs.keys():
         outfs[of].close()
-    
+    '''
+    p.wait()
+    print ('END')    
     outf = open(res_file(ticket+'.done'),'w')
     outf.close()                    
 
@@ -437,7 +473,7 @@ def get_db_langs(dbs):
             xx.append(ln.strip())
 
         inf.close()
-        xx.sort()
+    xx.sort()
 
     return xx
 
@@ -532,31 +568,43 @@ def kdll(ticket, lang):
 
     return response
 
-@app.route("/freqs/<ticket>/<lang>")
-def fr(ticket, lang):
 
-    return jsonify(get_freqs(res_file(lang + '_' + ticket + '*.conllu')))
 
 @app.route("/freqs/<ticket>")
 def ffr(ticket):
 
-    freqs = get_freqs(res_file('*' + ticket + '*.conllu'))
-    return json.dumps(freqs, indent=4, sort_keys=True)
-    #return jsonify(get_freqs('./res/*' + ticket + '*.conllu'))
+    ret = get_freqs(res_file('*_' + ticket + '*.conllu'))
+    relx = ["dependent_words","dependent_lemmas", "left_words","left_lemmas", "right_words","right_lemmas","parent_words","parent_lemmas","deptypes_as_dependent","deptypes_as_parent","hit_words","hit_lemmas"]    
+    return render_template('freqs.html', ret=ret, relx=relx, xurl="/json_freqs/" + ticket)
 
-'''
-@app.route("/start_query/<dbs>/<query>/<langs>/<limit>")
-def hello_q(dbs, query, langs, limit):
+@app.route("/freqs/<ticket>/<lang>")
+def frf(ticket, lang):
 
-    print ("YYY")
-    #./start_query/pb/minä//10000/false
+    ret = get_freqs(res_file(lang + '_' + ticket + '*.conllu'))
+    relx = ["dependent_words","dependent_lemmas", "left_words","left_lemmas", "right_words","right_lemmas","parent_words","parent_lemmas","deptypes_as_dependent","deptypes_as_parent","hit_words","hit_lemmas", "left_words","left_lemmas"]
+
+    return render_template('freqs.html', ret=ret, relx=relx, xurl="/json_freqs/" + ticket + '/' + lang) 
 
 
-    ticket = unique_id()
-    p = Process(target=query_process, args=(dbs,query, langs, ticket, limit))
-    p.start()
-    return ticket
-'''
+@app.route("/json_freqs/<ticket>")
+def fffr(ticket):
+
+    ret = json.dumps(get_freqs(res_file('*_' + ticket + '*.conllu')), indent=4, sort_keys=True)
+    resp = Response(response=ret,
+                    status=200,
+                    mimetype="application/json")    
+    return resp
+
+@app.route("/json_freqs/<ticket>/<lang>")
+def fr(ticket, lang):
+
+    ret = json.dumps(get_freqs(res_file(lang + '_' + ticket + '*.conllu')), indent=4, sort_keys=True)
+    resp = Response(response=ret,
+                    status=200,
+                    mimetype="application/json")    
+    return resp
+
+
 
 @app.route("/start_query/<dbs>/<query>/<limit>/<case>")
 def hello_qc(dbs, query, limit, case):
@@ -590,7 +638,7 @@ def start_post():
     case = request.form['case']
 
 
-
+    print ('case', case)
 
     ticket = unique_id()
     print (dbs,query, langs, ticket, limit, case)    
@@ -598,6 +646,42 @@ def start_post():
     p.start()
     return ticket
 
+from dep_search import redone_expr, get_tags
+
+@app.route("/get_tags/", methods=['POST'])
+def tagset():
+
+    dbs = request.form['dbs']
+    langs = request.form['langs']
+    
+    xdbs = get_flat_dbs()
+
+    xdb_string = []
+    langs = langs.split(',')
+    for x in dbs.split(','):
+        if len(langs) > 0 and len(langs[0]) > 0:
+            langs_in_db = get_db_langs([x])
+            if len(set(langs).intersection(set(langs_in_db))) > 0:
+                xdb_string.append(xdbs[x])
+        else:
+            try:
+                xdb_string.append(xdbs[x])
+            except:
+                pass
+    
+    dep_types, pos, tags = get_tags.get_tags_list(xdb_string)
+    dep_types, pos, tags = list(dep_types), list(pos), list(tags)
+
+    dep_types.sort()
+    pos.sort()
+    tags.sort()
+
+    return jsonify([dep_types, pos, tags])
+
+@app.route("/check_query_syntax/", methods=['POST'])
+def chek_syn():
+    query = request.form['query']
+    return jsonify(redone_expr.check_and_give_error(query))
 
 @app.route("/query_info/<ticket>")
 def qinf(ticket):
@@ -616,58 +700,45 @@ def kill_q(ticket):
 @app.route("/get_result_count/<ticket>")
 def get_res_count(ticket):
 
+    try:
+        files = glob.glob(res_file('*' + ticket + '*.conllu'))
+        print (files)
+        res = {}
+        for f in files:
+            lang = '_'.join(f.split('/')[-1].split('_')[:-2])
+            number = int(f.split('/')[-1].split('_')[-1].split('.')[0])
+            if lang not in res.keys():
+                res[lang] = 0
+            if number > res[lang]:
+                res[lang] = number
 
-    #fi_2304882037610770081_167740.conllu
+        better_res = {}
+        for k in res:
+            ## lang_ticket_number
+            inf = open(res_file(str(k) + '_' + ticket + '_' + str(res[k])+".conllu"), 'rt')
+            cnt = 0
+            for l in inf:
+                if '# lang:' in l:
+                    cnt += 1
+            inf.close()
+            better_res[k] = res[k] + cnt
 
-    files = glob.glob(res_file('*' + ticket + '*.conllu'))
-
-    res = {}
-    for f in files:
-        lang = '_'.join(f.split('/')[-1].split('_')[:-2])
-        number = int(f.split('/')[-1].split('_')[-1].split('.')[0])
-        if lang not in res.keys():
-            res[lang] = 0
-        if number > res[lang]:
-            res[lang] = number
+        inf = open(res_file(ticket + '_err'),'rt')
+        errors = inf.read()
+        inf.close()
+        if len(better_res) < 1 and len(errors) > 0: better_res = {'': errors}
+    except:
+        better_res = {}
 
     tr = []
-    for k in res.keys():
-        if res[k] < 1:
+    for k in better_res.keys():
+        if better_res[k] < 1:
             tr.append(k)
     for k in tr:
-        del res[k]
+        del better_res[k]
 
-    better_res = {}
-    for k in res:
-        ## lang_ticket_number
-        print (k, res[k])
-        inf = open(res_file(str(k) + '_' + ticket + '_' + str(res[k])+".conllu"), 'rt')
-        cnt = 0
-        for l in inf:
-            if '# lang:' in l:
-                cnt += 1
-                print (':)')
-        inf.close()
-        better_res[k] = res[k] + cnt
-                
     return jsonify(better_res)
 
-
-    '''
-    res = 0
-    files = glob.glob('./res/' + ticket + '*.conllu')
-    files.sort()
-    if len(files) > 0:
-        res = int(files[-1].split('_')[-1].split('.')[0])
-
-    inf = open(files[-1],'rt')
-    stuff = inf.readlines()
-    inf.close()
-    for l in stuff:
-        if '# hittoken:' in l:
-            res += 1
-    return json.dumps(res)
-    '''
 
 @app.route("/is_query_finished/<ticket>")
 def gxet_res_count(ticket):
@@ -686,6 +757,9 @@ def get_langs(ticket):
         xx.close()
     except:
         langs = []
+    langs = list(langs)    
+    langs.sort()
+    print (langs)
     return jsonify(list(langs))
 
 @app.route("/get_tree_count/<ticket>/<lang>/")
@@ -731,15 +805,17 @@ def get_xtrees(ticket, lang, start, end):
         inf = open(res_file(ticket+'.json'), 'r')
         inf.close()
     except:
-        time.sleep(0.15)
+        time.sleep(0.5)
 
     if lang == 'undefined':
         #
-        #try:
-        inf = open(res_file(ticket+'.json'), 'r')
-        db = json.load(inf)
-        db = db["dbs"]
-        inf.close()
+        try:
+            inf = open(res_file(ticket+'.json'), 'r')
+            db = json.load(inf)
+            db = db["dbs"]
+            inf.close()
+        except:
+            return render_template('query.html', start=start, end=end, lang=lang, idx=ticket, approot=approot)
 
         dbs = get_flat_dbs()
 
@@ -755,34 +831,6 @@ def get_xtrees(ticket, lang, start, end):
         #    return render_template('query.html', start=0, end=(end-start), lang='unknown', idx=ticket, approot=approot)
   
     return render_template('query.html', start=start, end=end, lang=lang, idx=ticket, approot=approot)
-
-'''
-@app.route("/get_trees/<ticket>/<lang>/<int:start>/<int:end>")
-def get_trees(ticket, lang, start, end):
-
-    trees = []
-
-    tc = 0
-    curr_tree = []
-    inf = open('./res/' + ticket,'rt')
-    for l in inf:
-        curr_tree.append(l)
-        if l == '\n':
-            
-            for c in curr_tree:
-                if c.startswith('# lang: ' + lang) or (c.startswith('# lang: ') and lang in c):
-                    if tc <= end and tc >= start:
-                        trees.append(''.join(curr_tree[:]))
-                    if tc > end:
-                        break
-                    tc += 1
-            curr_tree = []
-
-    src = ''.join(trees).split('\n')
-    ret = flask.render_template(u"result_tbl.html",trees=yield_trees(src))
-
-    return ret
-'''
 
 
 @app.route("/get_trees/<ticket>/<lang>/<int:start>/<int:end>")

@@ -315,18 +315,18 @@ def t_error(t):
 # the grammar rules are the comment strings of the functions
 
 #Main 
-precedence = (('left','PLUS'),('left','EQ'),('left','SE'),('left','DEPOP'),('left','OR'),('left','AND'),('left','NEG'), ('left', 'ECOM'), ('left','TEXT'), ('right', 'XDOT'), ('left', 'BGN'), ('left', 'END'))
+precedence = (('right','PLUS'),('right','EQ'),('right','SE'),('right','DEPOP'),('right','OR'),('right','AND'),('right','NEG'), ('right', 'ECOM'), ('right','TEXT'), ('right', 'XDOT'), ('right', 'BGN'), ('right', 'END'))
 
 def p_error(t):
     if t==None:
         raise ExpressionError(u"Syntax error at the end of the expression. Perhaps you forgot to specify a target token? Forgot to close parentheses?")
     else:
-        raise ExpressionError(u"Syntax error at the token '%s'\nHERE: '%s'..."%(t.value,t.lexer.lexdata[t.lexpos:t.lexpos+5]))
+        raise ExpressionError(u"Syntax error at the token '%s'\n%s\n%s^"%(t.value,t.lexer.lexdata, ' '*t.lexpos))
 
 #TOP  search -> expression
 def p_top(t):
     u'''search : setnode'''
-    t[0]=t[1]   #t[0] is the result (left-hand side) and t[1] is the result of "expr"
+    t[0]=t[1]   #t[0] is the result (right-hand side) and t[1] is the result of "expr"
 
 # expression can be:
 
@@ -695,7 +695,7 @@ def get_node_with_lcor(node):
     lc_node.extra_comments = node.extra_comments
 
     #og
-    original_node = SetNode_Token(node.token_restriction.lower())
+    original_node = SetNode_Token(node.token_restriction)
     original_node.proplabel = node.proplabel
     original_node.extra_comments = node.extra_comments
     or_node = SetNode_Or(lc_node, original_node)
@@ -784,6 +784,26 @@ def get_possible_subtrees(node):
 
 lex.lex(reflags=re.UNICODE)
 yacc.yacc(write_tables=0,debug=1,method='SLR')
+import traceback
+
+def check_and_give_error(expression):
+    e_parser=yacc.yacc(write_tables=0,debug=1,method='LALR')
+    try:
+        ebin = e_parser.parse(expression, debug=0)
+    except:
+        start = False
+        error = traceback.format_exc()
+        ret = []
+        for el in error.split('\n'):
+            if '.ExpressionError:' in el:
+                start = True
+                el = el.split(':')[-1].strip()
+            if start:
+                el = el.replace('<', '&lt;')
+                el = el.replace('>', '&gt;')
+                ret.append(el)
+        return False, '<br>'.join(ret)
+    return True, ''
 
  
 if __name__=="__main__":
@@ -797,7 +817,8 @@ if __name__=="__main__":
         import logging
         logging.basicConfig(filename='myapp.log', level=logging.INFO)
         log = logging.getLogger()
-        ebin = e_parser.parse(expression, debug=0)
+        #ebin = e_parser.parse(expression, debug=0)
+        check_and_give_error(expression)
         pass#print ebin.to_unicode()
         db_fix_tags(ebin)
         pass#print 'ORGS'
@@ -808,6 +829,6 @@ if __name__=="__main__":
 
 
         ebin = turn_into_caseless_2(ebin)[0]
-        pass#print ebin.to_unicode()
+        print (ebin.to_unicode())
 
 

@@ -66,86 +66,61 @@ cdef class Py_Tree:
     #here is the problem somehow
     def serialize_from_conllu(self, lines, comments, db_store):
         #this we need to save
-        tree_data={"comments":comments,
-                   "tokens":list(l[FORM] for l in lines),
-                   "lemmas":list(l[LEMMA] for l in lines),
-                   "misc":list(l[MISC] for l in lines)}
-
-        tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
-        tree_data_gz = compress(tree_text.encode('utf8'))
         
-        #Sets for the UPOS and FEAT
-        token_sets={} #Key: set number, Value: Python set() of integers
-        arrays={} #Key: relation number, Value: Python set() of (from,to) integer pairs
-        for t_idx,line in enumerate(lines):
-            for tag in [u"p_"+line[UPOS],u"f_"+line[FORM],u"l_"+line[LEMMA]]+line[FEAT].split(u"|"):
-                if tag[2:]!=u"_":
+        try:
+        
+            tree_data={"comments":comments,
+                       "tokens":list(l[FORM] for l in lines),
+                       "lemmas":list(l[LEMMA] for l in lines),
+                       "misc":list(l[MISC] for l in lines)}
 
-                    has_lc_ver = False
-                    if tag.startswith('f_') and tag.lower() != tag:
-                        has_lc_ver = True
+            tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
+            tree_data_gz = compress(tree_text.encode('utf8'))
+            
+            #Sets for the UPOS and FEAT
+            token_sets={} #Key: set number, Value: Python set() of integers
+            arrays={} #Key: relation number, Value: Python set() of (from,to) integer pairs
+            label_to_t_idx = {'0': -1}
+            for t_idx,line in enumerate(lines):
+                label_to_t_idx[line[ID]] = t_idx
 
-                    #Add tag into the db
-                    db_store.store_a_vocab_item(tag)
-                    set_id = db_store.get_id_for(tag)
-                    token_sets.setdefault(set_id,set()).add(t_idx)
+            for t_idx,line in enumerate(lines):
+                for tag in [u"p_"+line[UPOS],u"f_"+line[FORM],u"l_"+line[LEMMA]]+line[FEAT].split(u"|"):
+                    if tag[2:]!=u"_":
 
-                    if has_lc_ver:
-                    
-                        db_store.store_a_vocab_item(tag.lower() + '_lc')
-                        set_id = db_store.get_id_for(tag.lower() + '_lc')
+                        has_lc_ver = False
+                        if tag.startswith('f_') and tag.lower() != tag:
+                            has_lc_ver = True
+
+                        #Add tag into the db
+                        db_store.store_a_vocab_item(tag)
+                        set_id = db_store.get_id_for(tag)
                         token_sets.setdefault(set_id,set()).add(t_idx)
 
-            if line[DEPREL]!=u"_":
-                for gov,dep,dtype in [(int(line[HEAD])-1,t_idx, line[DEPREL])]:
-                    if gov==-1:
-                        continue
-                    #TODO: DEPS field
-
-                    db_store.store_a_vocab_item(u"g_"+dtype)
-                    set_id_g = db_store.get_id_for(u"g_"+dtype)
-                    #set_id_g=set_dict.setdefault(u"g_"+dtype,len(set_dict))
-                    arrays.setdefault(set_id_g,set()).add((gov,dep))
-
-                    db_store.store_a_vocab_item(u"g_anyrel")
-                    set_id_g = db_store.get_id_for(u"g_anyrel")
-                    #set_id_g=set_dict.setdefault(u"g_anyrel",len(set_dict))
-                    arrays.setdefault(set_id_g,set()).add((gov,dep))
-
-                    db_store.store_a_vocab_item(u"d_"+dtype)
-                    set_id_d = db_store.get_id_for(u"d_"+dtype)
-                    #set_id_d=set_dict.setdefault(u"d_"+dtype,len(set_dict))
-                    arrays.setdefault(set_id_d,set()).add((dep,gov))
-
-                    db_store.store_a_vocab_item(u"d_anyrel")
-                    set_id_d = db_store.get_id_for(u"d_anyrel")
-                    #set_id_d=set_dict.setdefault(u"d_anyrel",len(set_dict))
-                    arrays.setdefault(set_id_d,set()).add((dep,gov))
+                        if has_lc_ver:
+                        
+                            db_store.store_a_vocab_item(tag.lower() + '_lc')
+                            set_id = db_store.get_id_for(tag.lower() + '_lc')
+                            token_sets.setdefault(set_id,set()).add(t_idx)
 
 
-            #The Second layer
-            if line[-2]!=u"_":
-                dep = t_idx
-                for xx in line[DEPS].split('|'):
 
-                    #
-                    govs = xx.split(':')[0].split('.')
-                    for sgov in govs:
 
-                        gov = int(sgov) - 1
-                        dtype = ':'.join(xx.split(':')[1:])
-                        if gov == -1:
+                if line[DEPREL]!=u"_":
+                    for gov,dep,dtype in [(label_to_t_idx[line[HEAD]], t_idx, line[DEPREL])]:
+                        if gov==-1:
                             continue
+                        #TODO: DEPS field
 
                         db_store.store_a_vocab_item(u"g_"+dtype)
                         set_id_g = db_store.get_id_for(u"g_"+dtype)
                         #set_id_g=set_dict.setdefault(u"g_"+dtype,len(set_dict))
-                        arrays.setdefault(set_id_g,set()).add((gov,t_idx))
+                        arrays.setdefault(set_id_g,set()).add((gov,dep))
 
                         db_store.store_a_vocab_item(u"g_anyrel")
                         set_id_g = db_store.get_id_for(u"g_anyrel")
                         #set_id_g=set_dict.setdefault(u"g_anyrel",len(set_dict))
-                        arrays.setdefault(set_id_g,set()).add((gov,t_idx))
+                        arrays.setdefault(set_id_g,set()).add((gov,dep))
 
                         db_store.store_a_vocab_item(u"d_"+dtype)
                         set_id_d = db_store.get_id_for(u"d_"+dtype)
@@ -157,6 +132,51 @@ cdef class Py_Tree:
                         #set_id_d=set_dict.setdefault(u"d_anyrel",len(set_dict))
                         arrays.setdefault(set_id_d,set()).add((dep,gov))
 
+
+                #The Second layer
+                if line[-2]!=u"_":
+                    dep = t_idx
+                    for xx in line[DEPS].split('|'):
+
+                        #
+                        govs = xx.split(':')[0].split('.')
+                        for sgov in govs:
+
+                            gov = label_to_t_idx[sgov]#int(sgov) - 1
+                            dtype = ':'.join(xx.split(':')[1:])
+                            if gov == -1:
+                                continue
+
+                            db_store.store_a_vocab_item(u"g_"+dtype)
+                            set_id_g = db_store.get_id_for(u"g_"+dtype)
+                            #set_id_g=set_dict.setdefault(u"g_"+dtype,len(set_dict))
+                            arrays.setdefault(set_id_g,set()).add((gov,t_idx))
+
+                            db_store.store_a_vocab_item(u"g_anyrel")
+                            set_id_g = db_store.get_id_for(u"g_anyrel")
+                            #set_id_g=set_dict.setdefault(u"g_anyrel",len(set_dict))
+                            arrays.setdefault(set_id_g,set()).add((gov,t_idx))
+
+                            db_store.store_a_vocab_item(u"d_"+dtype)
+                            set_id_d = db_store.get_id_for(u"d_"+dtype)
+                            #set_id_d=set_dict.setdefault(u"d_"+dtype,len(set_dict))
+                            arrays.setdefault(set_id_d,set()).add((dep,gov))
+
+                            db_store.store_a_vocab_item(u"d_anyrel")
+                            set_id_d = db_store.get_id_for(u"d_anyrel")
+                            #set_id_d=set_dict.setdefault(u"d_anyrel",len(set_dict))
+                            arrays.setdefault(set_id_d,set()).add((dep,gov))
+        except:
+            import traceback
+            for l in lines:
+                print (l)
+                
+            print ()
+            print (label_to_t_idx)
+            traceback.print_exc()
+            import sys
+            sys.exit()
+            
         #Produces the packed map data
         map_lengths=[]
         map_data=b""
@@ -241,6 +261,7 @@ cdef class Py_Tree:
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers
         arrays={} #Key: relation number, Value: Python set() of (from,to) integer pairs
+        
         for t_idx,line in enumerate(lines):
             for tag in [u"p_"+line[UPOS],u"f_"+line[FORM],u"l_"+line[LEMMA]]+line[FEAT].split(u"|"):
                 if tag[2:]!=u"_":
