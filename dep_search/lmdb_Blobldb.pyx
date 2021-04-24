@@ -34,7 +34,7 @@ class DB(BaseDB):
         self.puts = []
         self.transaction_count = 0
         self.map_size = map_size
-        self.wlimit = 50000
+        self.wlimit = 100000
         self.tags = {}
         self.write_map = write_map
     #

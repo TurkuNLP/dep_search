@@ -325,7 +325,7 @@ class IDX(object):
         #self.txn = self.env.begin(write=True)
         #self.txn = self.env.begin(write=True)
         self.transaction_count = len(self.puts)
-        if self.transaction_count > 5000:
+        if self.transaction_count > 10000:
             self.transaction_count = 0
             self.write_stuff()
             #self.txn.commit()
