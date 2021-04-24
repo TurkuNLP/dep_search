@@ -286,9 +286,6 @@ if __name__=="__main__":
             if (counter)%100 == 0:
 
                 print (counter+1,',',datetime.now()-start_time, ',', getCurrentMemoryUsage()/1000.0, 'MB')
-                #print (mean(f_db_times))
-                #print (mean(b_db_times))
-
                 s_db_times = []
                 f_db_times = []
                 b_db_times = []

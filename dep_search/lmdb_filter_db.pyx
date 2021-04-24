@@ -275,12 +275,13 @@ class IDX(object):
         #self.txn = self.env.begin(write=True)
         
         self.transaction_count = len(self.puts)
-        if self.transaction_count > 500:
+        if self.transaction_count > 50000:
             self.transaction_count = 0
             self.write_stuff()        
         
         return idx
 
+    '''
 
     def write_stuff(self):
         with self.env.begin(write=True) as txn:
@@ -289,6 +290,19 @@ class IDX(object):
             #self.txn.commit()
             #txn = self.env.begin(write=True)
             self.puts = []
+    '''
+
+    def write_stuff(self):
+        with self.env.begin(write=True) as txn:
+            with txn.cursor() as curs:
+
+                curs.putmulti(self.puts)
+                #for k, v in self.puts:
+                #    txn.put(k, v)
+            #self.txn.commit()
+            #txn = self.env.begin(write=True)
+                self.puts = []
+
 
 
     def add_to_idx(self, comments, sent):
@@ -311,7 +325,7 @@ class IDX(object):
         #self.txn = self.env.begin(write=True)
         #self.txn = self.env.begin(write=True)
         self.transaction_count = len(self.puts)
-        if self.transaction_count > 500:
+        if self.transaction_count > 5000:
             self.transaction_count = 0
             self.write_stuff()
             #self.txn.commit()

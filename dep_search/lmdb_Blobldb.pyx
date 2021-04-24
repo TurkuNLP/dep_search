@@ -34,7 +34,7 @@ class DB(BaseDB):
         self.puts = []
         self.transaction_count = 0
         self.map_size = map_size
-        self.wlimit = 2000
+        self.wlimit = 50000
         self.tags = {}
         self.write_map = write_map
     #
@@ -77,11 +77,13 @@ class DB(BaseDB):
 
     def write_stuff(self):
         with self.env.begin(write=True) as txn:
-            for k, v in self.puts:
-                try:
-                    txn.put(k, v)
-                except:
-                    print (self.name)
+            with txn.cursor() as curs:
+                curs.putmulti(self.puts)
+            #for k, v in self.puts:
+            #    try:
+            #        txn.put(k, v)
+            #    except:
+            #        print (self.name)
 
         self.puts = []
 
