@@ -202,6 +202,7 @@ class IDX(object):
         self.open()
         self.transaction_count = 0
         self.puts = []
+        self.wlimit = 2000000
 
     def open(self):
         #check if pickle exists
@@ -275,7 +276,7 @@ class IDX(object):
         #self.txn = self.env.begin(write=True)
         
         self.transaction_count = len(self.puts)
-        if self.transaction_count > 50000:
+        if self.transaction_count > self.wlimit:
             self.transaction_count = 0
             self.write_stuff()        
         
@@ -325,7 +326,7 @@ class IDX(object):
         #self.txn = self.env.begin(write=True)
         #self.txn = self.env.begin(write=True)
         self.transaction_count = len(self.puts)
-        if self.transaction_count > 10000:
+        if self.transaction_count > self.wlimit:
             self.transaction_count = 0
             self.write_stuff()
             #self.txn.commit()
