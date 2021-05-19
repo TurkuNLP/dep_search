@@ -9,6 +9,7 @@ import zlib
 from setlib.pytset cimport PyTSet, PyTSetArray
 from libcpp cimport bool
 from lz4.frame import compress, decompress
+import zstandard
 
 ID,FORM,LEMMA,UPOS,XPOS,FEAT,HEAD,DEPREL,DEPS,MISC=range(10)
 
@@ -50,10 +51,11 @@ cdef class Py_Tree:
         del self.thisptr
 
     def __init__(self):
-        self.comp_dict = {}
+        self.comp_dict = b''
 
     def set_comp_dict(self, comp_dict):
         self.comp_dict = comp_dict
+        #self.xcomp_dict = zstandard.ZstdCompressionDict(comp_dict)
 
     def get_comp_dict(self):
         a = self.comp_dict
@@ -64,7 +66,7 @@ cdef class Py_Tree:
         #print self.thisptr.zipped_tree_text_length
 
     #here is the problem somehow
-    def serialize_from_conllu(self, lines, comments, db_store):
+    def serialize_from_conllu(self, lines, comments, db_store, compressor):
         #this we need to save
         
         try:
@@ -75,7 +77,9 @@ cdef class Py_Tree:
                        "misc":list(l[MISC] for l in lines)}
 
             tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
-            tree_data_gz = compress(tree_text.encode('utf8'))
+            #tree_data_gz = compress(tree_text.encode('utf8'))
+            #cctx = zstandard.ZstdCompressor(dict_data=comp_dict)
+            tree_data_gz = compressor.compress(tree_text.encode('utf8'))
             
             #Sets for the UPOS and FEAT
             token_sets={} #Key: set number, Value: Python set() of integers
@@ -256,7 +260,7 @@ cdef class Py_Tree:
         #I know, will fix
         tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
         #print tree_text
-        tree_data_gz = compress(tree_text.encode('utf8'))
+        #tree_data_gz = compress(tree_text.encode('utf8'))
         
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers
@@ -365,7 +369,7 @@ cdef class Py_Tree:
         #print lines
         #I know, will fix
         tree_text = '\n'.join(comments) + '\n' + u'\n'.join([u'\t'.join(l) for l in lines])
-        tree_data_gz = compress(tree_text.encode('utf8'))
+        #tree_data_gz = compress(tree_text.encode('utf8'))
 
         #Sets for the UPOS and FEAT
         token_sets={} #Key: set number, Value: Python set() of integers

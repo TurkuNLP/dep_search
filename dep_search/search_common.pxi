@@ -521,7 +521,11 @@ cdef class Search:  # base class for all searches
         #print ()
         cdef char * tree_text_data=self.tree.zipped_tree_text
         #result = tree_text_data[:self.tree.zipped_tree_text_length]
-        result = [l for l in lz4.frame.decompress(tree_text_data[:self.tree.zipped_tree_text_length]).decode('utf8').split(u'\n') if l.startswith(u'#')]
+        
+        cctx = comp_dict#zstandard.ZstdDEcompressor(dict_data=comp_dict)
+        
+        
+        result = [l for l in cctx.decompress(tree_text_data[:self.tree.zipped_tree_text_length]).decode('utf8').split(u'\n') if l.startswith(u'#')]
         return '\n'.join(result)
         #return result
 
@@ -532,7 +536,9 @@ cdef class Search:  # base class for all searches
         #print (self.tree.zipped_tree_text_length)
         #print (tree_text_data)
         #result = tree_text_data[:self.tree.zipped_tree_text_length]
-        result = [l for l in lz4.frame.decompress(tree_text_data[:self.tree.zipped_tree_text_length]).decode('utf8').split(u'\n') if not l.startswith(u'#')]
+        cctx = comp_dict#zstandard.ZstdDEcompressor(dict_data=comp_dict)
+        
+        result = [l for l in cctx.decompress(tree_text_data[:self.tree.zipped_tree_text_length]).decode('utf8').split(u'\n') if not l.startswith(u'#')]
         return '\n'.join(result)
         #return result
 

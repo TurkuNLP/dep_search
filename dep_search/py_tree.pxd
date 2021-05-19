@@ -1,6 +1,6 @@
 from libc.stdint cimport uint16_t, uint32_t
 from libcpp cimport bool
-
+import zstandard
 
 cdef extern from "tset.h" namespace "tset":
     cdef cppclass TSet:
@@ -40,5 +40,5 @@ cdef extern from "tree_lmdb.h":
 
 cdef class Py_Tree:
     cdef Tree *thisptr
-    cdef dict comp_dict
+    cdef bytes comp_dict
     cdef int fill_sets(self, void **set_pointers, uint32_t *indices, unsigned char *types, unsigned char *optional, int size)

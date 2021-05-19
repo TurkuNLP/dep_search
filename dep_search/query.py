@@ -14,6 +14,7 @@ from tempfile import gettempdir
 from contextlib import contextmanager
 import io
 import pickle
+import zstandard
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -741,9 +742,16 @@ def main_db_query(args, res_per_lang, mod=None):
         extra_params= ast.literal_eval(args.extra_solr_params)
     except:
         extra_params = {}
-    #inf = open(args.database + '/comp_dict.pickle','rb')
-    comp_dict = {}#pickle.load(inf)
+
+    #load comp_dict
+    inf = open(args.database + '/comp_dict.pickle','rb')
+    sample = pickle.load(inf)
     inf.close()
+    comp_dict = zstandard.ZstdCompressionDict(sample.encode('utf8'))
+    comp_dict = zstandard.ZstdDecompressor(dict_data=comp_dict)
+
+
+
     
     langs=[]
     if langs == "": 

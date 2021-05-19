@@ -25,10 +25,45 @@ import time
 import pickle
 import copy
 
+import zstandard
+
+
 ID,FORM,LEMMA,UPOS,XPOS,FEATS,HEAD,DEPREL,DEPS,MISC=range(10)
 
 symbs=re.compile(r"[^A-Za-z0-9_]",re.U)
 
+
+def s_streamer(begin_data, inp):
+    for x in begin_data.rstrip(u'\n').split(u'\n'):
+        #if len(x) > 0:
+        yield x + u'\n'
+    #yield begin_data.split(u'\n')[-1]
+    for x in inp:
+        yield x
+
+def streamer(inp, amount=200):
+
+    if isinstance(inp,str):
+        f=open(inp,u"rt")
+        sample = ''
+        cc = 0
+        for l in f:
+            sample += l
+            cc += 1
+            if cc > amount: break
+            
+        f.seek(0)
+        return sample, f
+    else:
+        f=inp
+        sample = ''
+        cc = 0
+        for l in f:
+            sample += l
+            cc += 1
+            if cc > amount: break
+        return sample, s_streamer(sample, f)        
+    
 
 def mean(numbers):
     return float(sum(numbers)) / max(len(numbers), 1)
@@ -161,8 +196,7 @@ if __name__=="__main__":
 
     part = 0
 
-
-
+    dict_size = 10000
 
     #Load the database modules
     sys.path.append('./dep_search/')
@@ -192,8 +226,10 @@ if __name__=="__main__":
         set_id_db = blob_db.DB(args.dir)
     set_id_db.open(foldername='/set_id_db/')
 
-        
-    src_data=read_conll(sys.stdin, args.max, args.skip_first)
+    sample, f = streamer(sys.stdin)
+
+    
+    src_data=read_conll(f, args.max, args.skip_first)
     set_dict={}
     lengths=0
     counter=0
@@ -221,10 +257,13 @@ if __name__=="__main__":
     #load comp_dict
     try:
         inf = open(args.dir + '/comp_dict.pickle','rb')
-        comp_dict = pickle.load(inf)
+        sample = pickle.load(inf)
         inf.close()
+        comp_dict = zstandard.ZstdCompressionDict(sample.encode('utf8'))
+        compressor = zstandard.ZstdCompressor(dict_data=comp_dict)
     except:
-        comp_dict = {}
+         comp_dict = zstandard.ZstdCompressionDict(sample.encode('utf8'))
+         compressor = zstandard.ZstdCompressor(dict_data=comp_dict)
 
 
     args.dir = base_dir
@@ -233,12 +272,11 @@ if __name__=="__main__":
     try:
         for counter,(sent,comments) in enumerate(src_data):
 
-
-
             if len(sent)>sent_limit:
                 continue #Skip too long sentences
             if max(len(cols[FORM]) for cols in sent)>50 or max(len(cols[LEMMA]) for cols in sent)>50:
                 continue
+                #continue
 
             if args.cut_database_by_trees > 0 and (counter+1)%args.cut_database_by_trees == 0:
                 #close db
@@ -250,7 +288,7 @@ if __name__=="__main__":
                 #open a new one
                 self_idx = 0
                 outf = open(args.dir + '_part_' + str(part) + '/comp_dict.pickle','wb')
-                pickle.dump(comp_dict, outf)
+                pickle.dump(sample, outf)
                 outf.close()
                 
                 part += 1
@@ -280,12 +318,25 @@ if __name__=="__main__":
                 json.dump(vars(args), outf, indent = 4)
                 outf.close()                
 
+                outf = open(args.dir + '_part_' + str(part) + '/comp_dict.pickle','wb')
+                pickle.dump(sample, outf)
+                outf.close()
+
+
+
 
 
 
             if (counter)%100 == 0:
 
                 print (counter+1,',',datetime.now()-start_time, ',', getCurrentMemoryUsage()/1000.0, 'MB')
+                try:
+                    print (mean(f_db_times))
+                    print (mean(b_db_times))
+                    print (mean(s_db_times))
+                except:
+                    pass
+
                 s_db_times = []
                 f_db_times = []
                 b_db_times = []
@@ -294,26 +345,14 @@ if __name__=="__main__":
                 sys.stdout.flush()
 
             s=py_tree.Py_Tree()
-            s.set_comp_dict(comp_dict)
+            s.set_comp_dict(sample.encode('utf8'))
             start = time.time()
-            blob, form =s.serialize_from_conllu(sent,comments,set_id_db) #Form is the struct module format for the blob, not used anywhere really
+            blob, form =s.serialize_from_conllu(sent,comments,set_id_db, compressor) #Form is the struct module format for the blob, not used anywhere really
             end = time.time()
             s_db_times.append(end-start)
             scomp_dict = {}
-            if not dict_ready:
-                scomp_dict = s.get_comp_dict()
-                if len(scomp_dict) == 65535:
-                    dict_ready = True
-                comp_dict = scomp_dict
-                if args.cut_database_by_trees > 0:
-                    outf = open(args.dir + '_part_' + str(part) + '/comp_dict.pickle','wb')
-                    pickle.dump(comp_dict, outf)
-                    outf.close()
-                    
-                else:
-                    outf = open(args.dir + '/comp_dict.pickle','wb')
-                    pickle.dump(comp_dict, outf)
-                    outf.close()
+            
+            
 
 
 
@@ -366,6 +405,11 @@ if __name__=="__main__":
         
         set_id_db.close()
         set_id_db.finish_indexing()
+
+        outf = open(args.dir + '/comp_dict.pickle','wb')
+        pickle.dump(sample, outf)
+        outf.close()
+
         
         db.close()
         db.finish_indexing()

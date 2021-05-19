@@ -37,7 +37,7 @@ class Query():
         self.processes = {}
         #Init lmdb                                                           1099511627776
         self.env = lmdb.open(self.dir + '/lmdb_filter/', max_dbs=1, map_size=1099511627776)
-        self.db = self.env.open_db()
+        self.db = self.env.open_db(b'a', dupsort=True)
         #self.txn = self.env.begin()
 
 
@@ -53,7 +53,7 @@ class Query():
 
 
     def get_url(self, idx):
-        with self.env.begin() as txn:
+        with self.env.begin(db=self.db) as txn:
             return txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url'.encode('utf8'), default=b'').decode('utf8')
 
     def get_queue(self):
@@ -136,44 +136,41 @@ class Query():
         #import pdb;pdb.set_trace()
         counts.sort()
         rarest_pref=counts[0][1].encode('utf8')
-        with self.env.begin() as txn:
+        
+        
+        ##Getmulti here!
+        
+        with self.env.begin(db=self.db) as txn:
             cursor = txn.cursor()
             #print (cursor.set_key(rarest_pref))
             cx = 0
-            for key, val in cursor:
-                if not key.startswith(rarest_pref): continue
-                #print (key, val)
-                matches = 0
-                for c in counts:
-
-                    found = False
-                    #try:
-                    if txn.get(c[1].encode('utf8') + '_'.encode('utf8') + key.split(b'_')[-1], default=None) != None:
-                        found = True
-                    #except:
-                    else:
-                        found = False
-            
-                    if not found:
-                        break
-                    else:
+            #for key, val in cursor:
+            found = False
+            for key, val in cursor.getmulti([rarest_pref], dupdata=True):
+                matches = 1
+                yield int.from_bytes(val,'big')
+                '''
+                cursor1 = txn.cursor()
+                for k, v in cursor1.getmulti([c[1].encode('utf8') for c in counts[1:]], dupdata=True):
+                    if v == val:
                         matches += 1
-
                 if matches == len(counts):
-                    #print ('!!!!', int(idx[0].split('_'.encode('utf8'))[-1]))
-                    yield int(key.split(b'_')[-1])#int(idx[0].split('_'.encode('utf8'))[-1])
-                    #print ('!!', int(key.split(b'_')[-1]))
+                    yield int.from_bytes(val,'big')
                     hits += 1
-                #cx += 1
-
+                '''
     def get_lang(self, idx):
-        with self.env.begin() as txn:
+        with self.env.begin(db=self.db) as txn:
             return txn.get('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), default=None).decode('utf8')
 
 
     def get_count(self, pref):
-        counter = 0
+        with self.env.begin(db=self.db) as txn:    
+            cursor = txn.cursor()
+            if cursor.set_key(pref.encode('utf8')):
+                return cursor.count()
+            return 0
 
+'''
         if isinstance(pref, str):
             pref = pref.encode('utf8')
         with self.env.begin() as txn:    
@@ -185,7 +182,7 @@ class Query():
                 if key.startswith(pref):
                     counter += 1
             return str(counter).encode('utf8')
-
+'''
 
 
 
@@ -202,7 +199,7 @@ class IDX(object):
         self.open()
         self.transaction_count = 0
         self.puts = []
-        self.wlimit = 2000000
+        self.wlimit = 20000000
 
     def open(self):
         #check if pickle exists
@@ -212,7 +209,7 @@ class IDX(object):
             pass
 
         self.env = lmdb.open(self.name + '/lmdb_filter/', max_dbs=1, map_size=self.args.map_size, writemap=self.args.write_map)
-        self.db = self.env.open_db()
+        self.db = self.env.open_db(b'a', dupsort=True)
         #self.txn = self.env.begin(write=True)
 
 
@@ -261,7 +258,8 @@ class IDX(object):
         #print (val)
         #idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
         for v in set(val):
-            self.puts.append(((v + '_' + str(idx)).encode('utf8'), b'1'))
+            #self.puts.append(((v + '_' + str(idx)).encode('utf8'), b''))
+            self.puts.append(((v).encode('utf8'), idx.to_bytes(3, 'big')))
 
         #self.txn.commit()
         #self.txn = self.env.begin(write=True)
@@ -270,7 +268,7 @@ class IDX(object):
         self.puts.append(('tag_'.encode('utf8') + str(idx).encode('utf8') + '_lang'.encode('utf8'), self.lang.encode('utf8')))
         #self.txn.commit()
         #self.txn = self.env.begin(write=True)
-        self.puts.append(('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b'1'))
+        #self.puts.append(('lang_'.encode('utf8') + self.lang.encode('utf8') + '_'.encode('utf8') + str(idx).encode('utf8'), b''))
         #self.txn.commit()
         #self.txn = self.env.begin(write=True)
         #self.txn = self.env.begin(write=True)
@@ -294,7 +292,7 @@ class IDX(object):
     '''
 
     def write_stuff(self):
-        with self.env.begin(write=True) as txn:
+        with self.env.begin(db=self.db, write=True) as txn:
             with txn.cursor() as curs:
 
                 curs.putmulti(self.puts)
@@ -313,7 +311,12 @@ class IDX(object):
         #print (val)
         idx = int(self.get_count('dep_a_anyrel'.encode('utf8')))
         for v in set(val):
-            self.puts.append(((v + '_' + str(idx)).encode('utf8'), b'1'))
+            pass
+            #self.puts.append(((v).encode('utf8'), idx.to_bytes(2, 'big')))
+            #self.puts.append((v.encode('utf8') + b'_' + idx.to_bytes(4, 'big'), b''))
+            
+            
+            
             #self.txn.commit()
             #self.txn = self.env.begin(write=True)
         #self.txn.put('tag_'.encode('utf8') + str(idx).encode('utf8') + '_url', self.lang.encode('utf8'))
@@ -334,11 +337,15 @@ class IDX(object):
         return idx
 
     def get_count(self, pref):
-        counter = 0
-
-        if isinstance(pref, str):
-            pref = pref.encode('utf8')
-        with self.env.begin() as txn:
+        with self.env.begin(db=self.db) as txn:    
+            cursor = txn.cursor()
+            if isinstance(pref,str): pref=pref.encode('utf8')
+            if cursor.set_key(pref):
+                return cursor.count()
+            return 0
+            
+'''       
+        
             cursor = txn.cursor()
             if not cursor.set_range(pref):
                 return b'0'
@@ -347,3 +354,4 @@ class IDX(object):
                 if key.startswith(pref):
                     counter += 1
             return str(counter).encode('utf8')
+'''           
