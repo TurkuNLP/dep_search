@@ -11,3 +11,4 @@ ply
 flask
 natsort
 lz4
+zstandard
