@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>TurkuNLP dep_search</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="">
+</head>
+<body>
+
+<a href={{xurl}}>Download json </a>
+<br><br>
+<h2>Stats</h2>
+<div style="border: 1px outset black;width: 500px;">
+{% for k, v in ret[0].items() %}
+    {{ k }} : {{ v }} <br>
+{% endfor %}
+</div>
+
+<br><br>
+
+
+{% for xx in relx %}
+        <h2>{{ xx }}</h2>
+<div style="border: 1px outset black;width: 500px;">
+
+        {{ xx }}_count : {{ ret[1][ xx + "_count"] }}<br><br>
+        {% if ret[1][xx + "_most_common"]|length > 0 %}
+            <h3>Top 10</h3>
+                {% for k, v in ret[1][xx + "_most_common"] %}
+                    {{ k }} : {{ v }} <br>
+                {% endfor %}
+        {% endif %}
+</div>
+
+<br><br>
+
+{% endfor %}
+
+
+
+</body>
+</html>
